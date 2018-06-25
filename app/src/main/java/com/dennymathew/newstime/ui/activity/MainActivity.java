@@ -5,7 +5,7 @@ import android.os.Bundle;
 import com.dennymathew.newstime.R;
 import com.dennymathew.newstime.base.activity.BaseActivity;
 import com.dennymathew.newstime.data.model.News;
-import com.dennymathew.newstime.data.network.NewsService;
+import com.dennymathew.newstime.data.service.NewsService;
 
 import javax.inject.Inject;
 
