@@ -2,6 +2,7 @@ package com.dennymathew.newstime.di.network;
 
 import android.app.Application;
 
+import com.dennymathew.newstime.base.App;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -30,7 +31,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 @Module
 public class NetworkModule {
 
-    private final static String NEWS_API_URL = "https://newsapi.org/v2/top-headlines";
+    private final static String NEWS_API_URL = "https://newsapi.org/v2/";
 
     @Provides
     @Singleton
@@ -47,14 +48,14 @@ public class NetworkModule {
 
     @Provides
     @Singleton
-    Cache providesOkHttpCache(Application app) {
+    Cache providesOkHttpCache(App application) {
         int cacheSize = 10 * 1024 * 1024; // 10 MiB
-        return new Cache(app.getCacheDir(), cacheSize);
+        return new Cache(application.getCacheDir(), cacheSize);
     }
 
     @Provides
     @Singleton
-    OkHttpClient.Builder providesOkHttpClient(HttpLoggingInterceptor logger, Cache cache) {
+    OkHttpClient providesOkHttpClient(HttpLoggingInterceptor logger, Cache cache) {
         return new OkHttpClient.Builder()
                 .readTimeout(15, TimeUnit.SECONDS)
                 .cache(cache)
@@ -70,12 +71,12 @@ public class NetworkModule {
                         return chain.proceed(request);
                     }
                 })
-                .addInterceptor(logger);
+                .addInterceptor(logger).build();
     }
 
     @Provides
     @Singleton
-    public Retrofit providesRetrofit(Gson gson, OkHttpClient okHttpClient) {
+    Retrofit providesRetrofit(Gson gson, OkHttpClient okHttpClient) {
 
         return new Retrofit.Builder()
                 .baseUrl(NEWS_API_URL)

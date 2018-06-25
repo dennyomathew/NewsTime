@@ -1,10 +1,13 @@
 package com.dennymathew.newstime.di.app;
 
-import com.dennymathew.newstime.App;
+import com.dennymathew.newstime.base.App;
+import com.dennymathew.newstime.di.network.NewsServiceModule;
 
 import javax.inject.Singleton;
 
 import dagger.Component;
+import dagger.android.AndroidInjector;
+import dagger.android.support.AndroidSupportInjectionModule;
 
 /**
  * Created by Denny on 3/30/2018.
@@ -12,18 +15,16 @@ import dagger.Component;
 
 @Singleton
 @Component(
-        modules = {
-                AppModule.class
-        }
+    modules = {
+        AndroidSupportInjectionModule.class,
+            NewsServiceModule.class,
+        ActivityBuilderModule.class,
+        AppModule.class
+    }
 )
-public interface AppComponent {
+public interface AppComponent extends AndroidInjector<App> {
 
     @Component.Builder
-    interface Builder {
+    abstract class Builder extends AndroidInjector.Builder<App> {}
 
-        Builder application(App application);
-        AppComponent build();
-    }
-
-    void inject(App app);
 }

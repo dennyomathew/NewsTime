@@ -6,9 +6,10 @@ project.ext {
     daggerVersion = "2.13"
     lifecycleVersion = "1.1.1"
     butterknifeVersion = "8.8.1"
-    roomVersion = "1.1.1-rc1"
+    roomVersion = "1.1.1"
     retrofitVersion = "2.4.0"
 
+    timberVersion = "4.7.0"
     testrunnerVersion = "1.0.2"
     expressoVersion = "3.0.2"
 }
@@ -22,6 +23,7 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "API_KEY", API_KEY)
     }
     buildTypes {
         release {
@@ -34,9 +36,12 @@ android {
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'com.android.support:appcompat-v7:26.1.0'
+    implementation 'com.android.support.constraint:constraint-layout:1.1.2'
     testImplementation 'junit:junit:4.12'
     androidTestImplementation "com.android.support.test:runner:$project.testrunnerVersion"
     androidTestImplementation "com.android.support.test.espresso:espresso-core:$project.expressoVersion"
+
+    implementation "com.jakewharton.timber:timber:$project.timberVersion"
 
     // Dagger core
     annotationProcessor "com.google.dagger:dagger-compiler:$project.daggerVersion"

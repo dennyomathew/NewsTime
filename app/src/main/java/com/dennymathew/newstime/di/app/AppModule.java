@@ -2,7 +2,7 @@ package com.dennymathew.newstime.di.app;
 
 import android.content.Context;
 
-import com.dennymathew.newstime.App;
+import com.dennymathew.newstime.base.App;
 
 import javax.inject.Singleton;
 

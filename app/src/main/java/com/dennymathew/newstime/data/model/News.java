@@ -3,6 +3,8 @@ package com.dennymathew.newstime.data.model;
 import android.arch.persistence.room.Entity;
 import android.arch.persistence.room.PrimaryKey;
 
+import com.google.gson.annotations.SerializedName;
+
 import java.util.List;
 
 /**
@@ -10,11 +12,15 @@ import java.util.List;
  */
 
 @Entity
-public class NewsHeadline {
+public class News {
 
     @PrimaryKey(autoGenerate = true)
     private int id;
     private String status;
+
+    @SerializedName(value="totalResults")
     private int totalResults;
+
+    @SerializedName(value="articles")
     List<NewsArticle> newsArticleLst;
 }
