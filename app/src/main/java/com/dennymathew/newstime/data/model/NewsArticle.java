@@ -1,9 +1,14 @@
 package com.dennymathew.newstime.data.model;
 
+//import android.arch.persistence.room.ColumnInfo;
 import android.arch.persistence.room.Entity;
 import android.arch.persistence.room.PrimaryKey;
+import android.arch.persistence.room.TypeConverters;
 
+//import com.dennymathew.newstime.shared.TimestampConverter;
 import com.google.gson.annotations.SerializedName;
+
+//import java.util.Date;
 
 /**
  * Created by Denny on 3/30/2018.
@@ -14,6 +19,10 @@ public class NewsArticle {
 
     @PrimaryKey(autoGenerate = true)
     private int id;
+
+//    @ColumnInfo(name = "lastUpdated")
+//    @TypeConverters({TimestampConverter.class})
+//    private Date lastUpdated;
 
     @SerializedName(value="author")
     private String author;
@@ -88,4 +97,12 @@ public class NewsArticle {
     public void setPublishedAt(String publishedAt) {
         this.publishedAt = publishedAt;
     }
+
+/*    public Date getLastUpdated() {
+        return lastUpdated;
+    }
+
+    public void setLastUpdated(Date lastUpdated) {
+        this.lastUpdated = lastUpdated;
+    }*/
 }
