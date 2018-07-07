@@ -3,6 +3,7 @@ package com.dennymathew.newstime.di.app;
 import android.content.Context;
 
 import com.dennymathew.newstime.base.App;
+import com.dennymathew.newstime.util.AppExecutors;
 
 import javax.inject.Singleton;
 
@@ -18,7 +19,14 @@ public class AppModule {
 
     @Singleton
     @Provides
-    Context providesAppContext(App application) {
+    Context provideAppContext(App application) {
         return application.getApplicationContext();
+    }
+
+
+    @Provides
+    @Singleton
+    AppExecutors provideAppExecutors() {
+        return AppExecutors.getInstance();
     }
 }

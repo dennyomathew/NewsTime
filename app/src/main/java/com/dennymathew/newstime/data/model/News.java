@@ -20,5 +20,5 @@ public class News {
     private int totalResults;
 
     @SerializedName(value="articles")
-    List<NewsArticle> newsArticleLst;
+    public List<NewsArticle> newsArticleLst;
 }

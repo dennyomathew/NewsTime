@@ -1,4 +1,4 @@
-package com.dennymathew.newstime.shared;
+package com.dennymathew.newstime.util;
 
 /**
  * General Constants used throughout the app.

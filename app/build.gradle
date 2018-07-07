@@ -2,7 +2,7 @@ apply plugin: 'com.android.application'
 
 
 project.ext {
-    supportLibraryVersion = "26.1.0"
+    supportLibraryVersion = "27.1.1"
     daggerVersion = "2.13"
     lifecycleVersion = "1.1.1"
     butterknifeVersion = "8.8.1"
@@ -12,10 +12,12 @@ project.ext {
     timberVersion = "4.7.0"
     testrunnerVersion = "1.0.2"
     expressoVersion = "3.0.2"
+
+    glideVersion = "4.7.1"
 }
 
 android {
-    compileSdkVersion 26
+    compileSdkVersion 27
     defaultConfig {
         applicationId "com.dennymathew.newstime"
         minSdkVersion 19
@@ -34,13 +36,19 @@ android {
     dataBinding {
         enabled = true
     }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
 }
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation 'com.android.support:appcompat-v7:26.1.0'
+    implementation "com.android.support:appcompat-v7:$project.supportLibraryVersion"
+    implementation "com.android.support:support-v4:$project.supportLibraryVersion"
+    implementation "com.android.support:recyclerview-v7:$project.supportLibraryVersion"
+    implementation "com.android.support:cardview-v7:$project.supportLibraryVersion"
     implementation 'com.android.support.constraint:constraint-layout:1.1.2'
-    implementation 'com.android.support:support-v4:26.1.0'
     testImplementation 'junit:junit:4.12'
     androidTestImplementation "com.android.support.test:runner:$project.testrunnerVersion"
     androidTestImplementation "com.android.support.test.espresso:espresso-core:$project.expressoVersion"
@@ -70,4 +78,9 @@ dependencies {
     implementation "com.squareup.retrofit2:converter-gson:$project.retrofitVersion"
     // Logging for Retrofit
     implementation 'com.squareup.okhttp3:logging-interceptor:3.9.0'
+
+    //Glide
+    implementation "com.github.bumptech.glide:glide:$project.glideVersion"
+    annotationProcessor "com.github.bumptech.glide:compiler:$project.glideVersion"
+
 }

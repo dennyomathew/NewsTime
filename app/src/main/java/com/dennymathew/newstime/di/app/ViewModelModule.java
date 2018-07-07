@@ -4,7 +4,7 @@ import android.arch.lifecycle.ViewModel;
 import android.arch.lifecycle.ViewModelProvider;
 
 
-import com.dennymathew.newstime.viewmodel.HeadlinesViewModel;
+import com.dennymathew.newstime.ui.topnews.viewmodel.HeadlinesViewModel;
 import com.dennymathew.newstime.viewmodel.NewsViewModelFactory;
 import com.dennymathew.newstime.viewmodel.ViewModelKey;
 

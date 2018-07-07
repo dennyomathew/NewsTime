@@ -1,8 +1,7 @@
 package com.dennymathew.newstime.di.network;
 
-import android.app.Application;
-
 import com.dennymathew.newstime.base.App;
+import com.dennymathew.newstime.util.LiveDataCallAdapterFactory;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -35,27 +34,27 @@ public class NetworkModule {
 
     @Provides
     @Singleton
-    Gson providesGson() {
+    Gson provideGson() {
         return new GsonBuilder().
                 setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create();
     }
 
     @Provides
     @Singleton
-    HttpLoggingInterceptor providesHttpLogging() {
+    HttpLoggingInterceptor provideHttpLogging() {
         return new HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY);
     }
 
     @Provides
     @Singleton
-    Cache providesOkHttpCache(App application) {
+    Cache provideOkHttpCache(App application) {
         int cacheSize = 10 * 1024 * 1024; // 10 MiB
         return new Cache(application.getCacheDir(), cacheSize);
     }
 
     @Provides
     @Singleton
-    OkHttpClient providesOkHttpClient(HttpLoggingInterceptor logger, Cache cache) {
+    OkHttpClient provideOkHttpClient(HttpLoggingInterceptor logger, Cache cache) {
         return new OkHttpClient.Builder()
                 .readTimeout(15, TimeUnit.SECONDS)
                 .cache(cache)
@@ -76,11 +75,12 @@ public class NetworkModule {
 
     @Provides
     @Singleton
-    Retrofit providesRetrofit(Gson gson, OkHttpClient okHttpClient) {
+    Retrofit provideRetrofit(Gson gson, OkHttpClient okHttpClient) {
 
         return new Retrofit.Builder()
                 .baseUrl(NEWS_API_URL)
                 .addConverterFactory(GsonConverterFactory.create(gson))
+                .addCallAdapterFactory(new LiveDataCallAdapterFactory())
                 .client(okHttpClient)
                 .build();
 
