@@ -1,6 +1,9 @@
 # NewsTime
-Demo usage of News API (Still worked on).
+Demo usage of News API.
 
+![alt tag](https://i.imgur.com/xmtks1h.png)
+
+### Instructions
 
 1. Clone this project.
 2. Get an API Key from News API Service (https://newsapi.org/).
