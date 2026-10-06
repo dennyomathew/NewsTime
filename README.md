@@ -2,7 +2,7 @@
 
 Top headlines from [News API](https://newsapi.org/), cached offline.
 
-![alt tag](https://i.imgur.com/xmtks1h.png)
+<img src="docs/screenshot.webp" alt="NewsTime headlines screen" width="320">
 
 ## Tech stack
 
@@ -18,11 +18,12 @@ Top headlines from [News API](https://newsapi.org/), cached offline.
 
 1. Clone this project.
 2. Get an API key from [News API](https://newsapi.org/).
-3. Add it to `local.properties` in the project root (this file is gitignored):
+3. Add it to `local.properties` in the project root, creating the file if it doesn't exist:
    ```properties
    API_KEY=your-key-here
    ```
-   A Gradle property works too, for example `API_KEY=...` in `~/.gradle/gradle.properties`.
+   `local.properties` is gitignored, so your key stays on your machine. Don't put the key in
+   `gradle.properties`: that file is committed.
 4. Open the project in Android Studio and run the `app` configuration.
 
 Without a key the app still builds and launches, then shows an "API key is missing or invalid" message.
