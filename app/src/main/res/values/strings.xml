@@ -1,4 +1,8 @@
 <resources>
     <string name="app_name">Top News</string>
     <string name="app_title">Top News of the Hour</string>
+    <string name="headlines_empty">No headlines yet. Pull down to refresh.</string>
+    <string name="error_network">Can\'t reach the news service. Showing saved headlines.</string>
+    <string name="error_unauthorized">News API key is missing or invalid. See the README.</string>
+    <string name="error_server">The news service had a problem. Try again later.</string>
 </resources>
