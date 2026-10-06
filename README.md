@@ -12,7 +12,7 @@ Top headlines from [News API](https://newsapi.org/), cached offline.
 - **Networking**: Retrofit 3, OkHttp 5 and kotlinx.serialization
 - **Images**: Coil 3
 - **Build**: Gradle 9.8 (Kotlin DSL, version catalog), Android Gradle Plugin 9.4, Kotlin 2.4, KSP
-- **Tests**: JUnit, Robolectric and kotlinx-coroutines-test
+- **Tests**: JUnit, Robolectric, Compose UI tests and kotlinx-coroutines-test, run on every push and pull request by GitHub Actions
 
 ## Setup
 

@@ -43,6 +43,8 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     testOptions {
+        // Lets Robolectric resolve string resources in Compose UI tests.
+        unitTests.isIncludeAndroidResources = true
         unitTests.all {
             // Robolectric needs these on JDK 25+; harmless on older JDKs.
             it.jvmArgs(
@@ -67,6 +69,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     debugImplementation(libs.androidx.compose.ui.tooling)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
@@ -88,4 +91,6 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.androidx.test.core)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
 }
