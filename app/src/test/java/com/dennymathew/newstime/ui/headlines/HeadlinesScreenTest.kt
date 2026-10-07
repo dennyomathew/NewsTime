@@ -1,9 +1,6 @@
 package com.dennymathew.newstime.ui.headlines
 
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.platform.UriHandler
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
@@ -29,20 +26,13 @@ class HeadlinesScreenTest {
 
     private fun setScreen(state: HeadlinesUiState) {
         composeRule.setContent {
-            CompositionLocalProvider(
-                LocalUriHandler provides object : UriHandler {
-                    override fun openUri(uri: String) {
-                        openedUris += uri
-                    }
-                }
-            ) {
-                NewsTimeTheme {
-                    HeadlinesScreen(
-                        state = state,
-                        onRefresh = { refreshes++ },
-                        onErrorShown = { errorsShown++ }
-                    )
-                }
+            NewsTimeTheme {
+                HeadlinesScreen(
+                    state = state,
+                    onRefresh = { refreshes++ },
+                    onErrorShown = { errorsShown++ },
+                    onArticleClick = { openedUris += it.url }
+                )
             }
         }
     }
@@ -55,6 +45,21 @@ class HeadlinesScreenTest {
         composeRule.onNodeWithText("Headline 1").assertExists()
         composeRule.onNodeWithText("Summary 1").assertExists()
         composeRule.onNodeWithText("Headline 2").assertExists()
+    }
+
+    @Test
+    fun showsSourceAndRelativePublishTime() {
+        val twoHoursAgo = System.currentTimeMillis() - 2 * 60 * 60 * 1000L
+        setScreen(HeadlinesUiState(articles = listOf(article(1, publishedAtMillis = twoHoursAgo))))
+
+        composeRule.onNodeWithText("Associated Press · 2 hours ago").assertExists()
+    }
+
+    @Test
+    fun showsSourceAloneWhenPublishTimeIsUnknown() {
+        setScreen(HeadlinesUiState(articles = listOf(article(1, publishedAtMillis = null))))
+
+        composeRule.onNodeWithText("Associated Press").assertExists()
     }
 
     @Test
@@ -103,13 +108,14 @@ class HeadlinesScreenTest {
         assertTrue(refreshes > 0)
     }
 
-    private fun article(id: Int) = ArticleEntity(
+    private fun article(id: Int, publishedAtMillis: Long? = null) = ArticleEntity(
         url = "https://example.com/$id",
         title = "Headline $id",
         description = "Summary $id",
         author = null,
+        sourceName = "Associated Press",
         imageUrl = null,
-        publishedAt = null,
+        publishedAtMillis = publishedAtMillis,
         position = id
     )
 }

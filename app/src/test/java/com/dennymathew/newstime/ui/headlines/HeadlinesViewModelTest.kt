@@ -1,6 +1,7 @@
 package com.dennymathew.newstime.ui.headlines
 
 import com.dennymathew.newstime.FakeNewsApi
+import com.dennymathew.newstime.FakeRefreshTimeStore
 import com.dennymathew.newstime.data.NewsRepository
 import com.dennymathew.newstime.data.local.NewsDatabase
 import com.dennymathew.newstime.headlines
@@ -43,7 +44,8 @@ class HeadlinesViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() = HeadlinesViewModel(NewsRepository(api, database.articleDao()))
+    private fun viewModel() =
+        HeadlinesViewModel(NewsRepository(api, database.articleDao(), FakeRefreshTimeStore()))
 
     @Test
     fun init_loadsHeadlines() = runTest(dispatcher) {

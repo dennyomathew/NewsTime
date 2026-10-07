@@ -1,6 +1,7 @@
 package com.dennymathew.newstime.data
 
 import com.dennymathew.newstime.FakeNewsApi
+import com.dennymathew.newstime.FakeRefreshTimeStore
 import com.dennymathew.newstime.articleDto
 import com.dennymathew.newstime.data.local.NewsDatabase
 import com.dennymathew.newstime.headlines
@@ -11,6 +12,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -18,21 +20,25 @@ import org.robolectric.RobolectricTestRunner
 import retrofit2.HttpException
 import java.io.IOException
 import kotlin.time.Duration.Companion.minutes
-import kotlin.time.TestTimeSource
 
 @RunWith(RobolectricTestRunner::class)
 class NewsRepositoryTest {
 
     private lateinit var database: NewsDatabase
     private val api = FakeNewsApi()
-    private val clock = TestTimeSource()
+    private val refreshTimes = FakeRefreshTimeStore()
+    private var nowMillis = 1_000_000_000L
     private lateinit var repository: NewsRepository
 
     @Before
     fun setUp() {
         database = inMemoryDatabase()
-        repository = NewsRepository(api, database.articleDao(), clock)
+        repository = newRepository()
     }
+
+    // A new instance stands in for the app being reopened: only the stores carry over.
+    private fun newRepository() =
+        NewsRepository(api, database.articleDao(), refreshTimes, now = { nowMillis })
 
     @After
     fun tearDown() {
@@ -70,7 +76,7 @@ class NewsRepositoryTest {
     @Test
     fun refresh_withinAnHour_usesCache() = runTest {
         repository.refresh()
-        clock += 59.minutes
+        nowMillis += 59.minutes.inWholeMilliseconds
 
         repository.refresh()
 
@@ -80,7 +86,7 @@ class NewsRepositoryTest {
     @Test
     fun refresh_afterAnHour_fetchesAgain() = runTest {
         repository.refresh()
-        clock += 61.minutes
+        nowMillis += 61.minutes.inWholeMilliseconds
 
         repository.refresh()
 
@@ -129,6 +135,60 @@ class NewsRepositoryTest {
 
         assertEquals(2, api.requests)
         assertEquals(5, titles().size)
+    }
+
+    @Test
+    fun reopeningAppWithinAnHour_usesCache() = runTest {
+        repository.refresh()
+        nowMillis += 30.minutes.inWholeMilliseconds
+
+        newRepository().refresh()
+
+        assertEquals(1, api.requests)
+    }
+
+    @Test
+    fun reopeningAppAfterAnHour_fetchesAgain() = runTest {
+        repository.refresh()
+        nowMillis += 61.minutes.inWholeMilliseconds
+
+        newRepository().refresh()
+
+        assertEquals(2, api.requests)
+    }
+
+    @Test
+    fun freshTimestampWithEmptyCache_stillFetches() = runTest {
+        // e.g. the database was recreated after a schema change.
+        refreshTimes.lastRefresh = nowMillis
+
+        repository.refresh()
+
+        assertEquals(1, api.requests)
+    }
+
+    @Test
+    fun clockMovedBackwards_treatsCacheAsStale() = runTest {
+        repository.refresh()
+        nowMillis -= 5.minutes.inWholeMilliseconds
+
+        repository.refresh()
+
+        assertEquals(2, api.requests)
+    }
+
+    @Test
+    fun refresh_storesSourceAndPublishTime() = runTest {
+        api.onGetTopHeadlines = {
+            TopHeadlinesResponse(articles = listOf(articleDto(1), articleDto(2, publishedAt = "not a date")))
+        }
+
+        repository.refresh()
+
+        val (first, second) = repository.articles.first()
+        assertEquals("Associated Press", first.sourceName)
+        assertEquals(1_791_322_200_000L, first.publishedAtMillis)
+        assertNull(second.publishedAtMillis)
     }
 
     @Test(expected = HttpException::class)

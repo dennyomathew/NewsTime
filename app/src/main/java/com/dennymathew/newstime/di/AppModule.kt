@@ -67,7 +67,10 @@ object AppModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): NewsDatabase =
-        Room.databaseBuilder(context, NewsDatabase::class.java, NewsDatabase.NAME).build()
+        Room.databaseBuilder(context, NewsDatabase::class.java, NewsDatabase.NAME)
+            // The database is only a cache of headlines, so a schema change can start fresh.
+            .fallbackToDestructiveMigration(dropAllTables = true)
+            .build()
 
     @Provides
     fun provideArticleDao(database: NewsDatabase): ArticleDao = database.articleDao()
