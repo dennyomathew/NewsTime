@@ -11,7 +11,7 @@ Jetpack Compose (Material 3), Hilt, Room, Retrofit 3 / kotlinx.serialization and
 ./gradlew lintDebug            # Android lint
 ```
 
-CI (`.github/workflows/android.yml`) runs all three on pushes to `master` and on pull requests.
+CI (`.github/workflows/android.yml`) runs all three on pushes to `main` and on pull requests.
 
 ## Setup
 
