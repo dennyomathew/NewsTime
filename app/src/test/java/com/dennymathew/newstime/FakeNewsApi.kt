@@ -2,6 +2,7 @@ package com.dennymathew.newstime
 
 import com.dennymathew.newstime.data.remote.ArticleDto
 import com.dennymathew.newstime.data.remote.NewsApi
+import com.dennymathew.newstime.data.remote.SourceDto
 import com.dennymathew.newstime.data.remote.TopHeadlinesResponse
 import okhttp3.ResponseBody.Companion.toResponseBody
 import retrofit2.HttpException
@@ -18,8 +19,19 @@ class FakeNewsApi : NewsApi {
     }
 }
 
-fun articleDto(id: Int, url: String? = "https://example.com/$id", title: String? = "Headline $id") =
-    ArticleDto(title = title, url = url, description = "Summary $id", urlToImage = null)
+fun articleDto(
+    id: Int,
+    url: String? = "https://example.com/$id",
+    title: String? = "Headline $id",
+    publishedAt: String? = "2026-10-06T21:30:00Z"
+) = ArticleDto(
+    source = SourceDto(id = "associated-press", name = "Associated Press"),
+    title = title,
+    url = url,
+    description = "Summary $id",
+    urlToImage = null,
+    publishedAt = publishedAt
+)
 
 fun headlines(ids: IntRange) = TopHeadlinesResponse(
     status = "ok",

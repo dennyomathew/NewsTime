@@ -11,6 +11,9 @@ interface ArticleDao {
     @Query("SELECT * FROM articles ORDER BY position ASC")
     fun observeArticles(): Flow<List<ArticleEntity>>
 
+    @Query("SELECT COUNT(*) FROM articles")
+    suspend fun count(): Int
+
     @Upsert
     suspend fun upsertAll(articles: List<ArticleEntity>)
 

@@ -9,8 +9,9 @@ data class ArticleEntity(
     val title: String,
     val description: String?,
     val author: String?,
+    val sourceName: String?,
     val imageUrl: String?,
-    val publishedAt: String?,
+    val publishedAtMillis: Long?,
     // Preserves the API's ordering (newest first) across refreshes.
     val position: Int
 )
