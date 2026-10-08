@@ -2,9 +2,10 @@ package com.dennymathew.newstime
 
 import com.dennymathew.newstime.data.local.RefreshTimeStore
 
-class FakeRefreshTimeStore(var lastRefresh: Long? = null) : RefreshTimeStore {
-    override suspend fun lastRefreshMillis(): Long? = lastRefresh
-    override suspend fun setLastRefreshMillis(millis: Long) {
-        lastRefresh = millis
+class FakeRefreshTimeStore : RefreshTimeStore {
+    val times = mutableMapOf<String, Long>()
+    override suspend fun lastRefreshMillis(feed: String): Long? = times[feed]
+    override suspend fun setLastRefreshMillis(feed: String, millis: Long) {
+        times[feed] = millis
     }
 }

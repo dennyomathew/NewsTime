@@ -1,8 +1,9 @@
 # NewsTime
 
-Top headlines from [News API](https://newsapi.org/), cached offline.
+Top headlines from [News API](https://newsapi.org/) by category (Top, Business, Technology,
+Sports, Entertainment, Health, Science), cached offline.
 
-<img src="docs/screenshot.webp" alt="NewsTime headlines screen" width="320">
+<img src="docs/screenshot-categories.webp" alt="NewsTime headlines screen" width="320">
 
 ## Tech stack
 
