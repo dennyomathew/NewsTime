@@ -52,7 +52,8 @@ CI (`.github/workflows/android.yml`) runs all three on pushes to `main` and on p
 ## Git workflow
 
 - One branch per pull request, named after the work (e.g. `claude/category-chips`), created
-  fresh from the default branch. Never reuse a merged branch or force-push to restart one.
+  fresh from the default branch. Never reuse a merged branch or force-push to restart one;
+  follow-up fixes after a merge get their own new branch and pull request too.
 - Merge with squash. Delete the head branch after merging: the repo has GitHub's
   "Automatically delete head branches" setting on for this (cloud sessions can't delete
   remote branches themselves).

@@ -34,15 +34,13 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.toArgb
@@ -54,7 +52,9 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
+import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.SubcomposeAsyncImageContent
 import com.dennymathew.newstime.R
 import com.dennymathew.newstime.data.NewsCategory
 import com.dennymathew.newstime.data.local.ArticleEntity
@@ -189,7 +189,8 @@ private fun ArticleCard(article: ArticleEntity, onClick: () -> Unit) {
             .fillMaxWidth()
             .clickable(onClick = onClick)
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // Spacing sits on each item (not spacedBy) so an image that never loads leaves no gap.
+        Column(Modifier.padding(16.dp)) {
             Text(
                 text = article.title,
                 style = MaterialTheme.typography.titleMedium,
@@ -199,36 +200,48 @@ private fun ArticleCard(article: ArticleEntity, onClick: () -> Unit) {
                 Text(
                     text = it,
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 12.dp)
                 )
             }
-            // Some links in News API data don't load (blocked, moved or not an image); rather
-            // than leave an empty box, the card drops the image once loading fails.
-            var imageFailed by remember(article.imageUrl) { mutableStateOf(false) }
-            if (article.imageUrl != null && !imageFailed) {
-                AsyncImage(
-                    model = article.imageUrl,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    placeholder = ColorPainter(MaterialTheme.colorScheme.surfaceVariant),
-                    onError = { error ->
-                        Log.w(TAG, "Image failed: ${article.imageUrl}", error.result.throwable)
-                        imageFailed = true
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                )
-            }
+            // The image takes no space until it has loaded: no empty box while loading, and
+            // nothing at all if the link fails (News API links are sometimes blocked or moved).
+            article.imageUrl?.let { imageUrl -> ArticleImage(imageUrl) }
             article.description?.let {
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 12.dp)
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun ArticleImage(imageUrl: String) {
+    SubcomposeAsyncImage(
+        model = imageUrl,
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        val imageState by painter.state.collectAsState()
+        when (imageState) {
+            is AsyncImagePainter.State.Success -> SubcomposeAsyncImageContent(
+                modifier = Modifier
+                    .padding(top = 12.dp)
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .clip(RoundedCornerShape(8.dp))
+            )
+            is AsyncImagePainter.State.Error -> LaunchedEffect(imageUrl) {
+                val error = (imageState as AsyncImagePainter.State.Error).result.throwable
+                Log.w(TAG, "Image failed: $imageUrl", error)
+            }
+            else -> Unit // Loading: take no space.
         }
     }
 }
