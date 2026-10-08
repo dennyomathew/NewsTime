@@ -1,6 +1,13 @@
 <resources>
     <string name="app_name">Top News</string>
     <string name="app_title">Top News of the Hour</string>
+    <string name="category_top">Top</string>
+    <string name="category_business">Business</string>
+    <string name="category_technology">Technology</string>
+    <string name="category_sports">Sports</string>
+    <string name="category_entertainment">Entertainment</string>
+    <string name="category_health">Health</string>
+    <string name="category_science">Science</string>
     <string name="headlines_empty">No headlines yet. Pull down to refresh.</string>
     <string name="error_network">Can\'t reach the news service. Showing saved headlines.</string>
     <string name="error_unauthorized">News API key is missing or invalid. See the README.</string>

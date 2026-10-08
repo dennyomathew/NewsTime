@@ -2,6 +2,7 @@ package com.dennymathew.newstime.ui.headlines
 
 import com.dennymathew.newstime.FakeNewsApi
 import com.dennymathew.newstime.FakeRefreshTimeStore
+import com.dennymathew.newstime.data.NewsCategory
 import com.dennymathew.newstime.data.NewsRepository
 import com.dennymathew.newstime.data.local.NewsDatabase
 import com.dennymathew.newstime.headlines
@@ -92,6 +93,33 @@ class HeadlinesViewModelTest {
         vm.uiState.launchIn(backgroundScope)
 
         assertEquals(HeadlinesError.Server, vm.uiState.value.error)
+    }
+
+    @Test
+    fun selectCategory_showsThatCategorysHeadlines() = runTest(dispatcher) {
+        api.onGetTopHeadlines = { request ->
+            if (request.category == "sports") headlines(10..11) else headlines(1..3)
+        }
+        val vm = viewModel()
+        vm.uiState.launchIn(backgroundScope)
+
+        vm.selectCategory(NewsCategory.Sports)
+
+        val state = vm.uiState.value
+        assertEquals(NewsCategory.Sports, state.category)
+        assertEquals(listOf("Headline 10", "Headline 11"), state.articles.map { it.title })
+    }
+
+    @Test
+    fun switchingBackToACategory_usesItsCache() = runTest(dispatcher) {
+        val vm = viewModel()
+        vm.uiState.launchIn(backgroundScope)
+
+        vm.selectCategory(NewsCategory.Sports)
+        vm.selectCategory(NewsCategory.Top)
+
+        assertEquals(2, api.requests) // Top on start, Sports once; Top again is cached
+        assertEquals(3, vm.uiState.value.articles.size)
     }
 
     @Test

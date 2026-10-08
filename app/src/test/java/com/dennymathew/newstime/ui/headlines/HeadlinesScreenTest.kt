@@ -1,10 +1,13 @@
 package com.dennymathew.newstime.ui.headlines
 
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
+import com.dennymathew.newstime.data.NewsCategory
 import com.dennymathew.newstime.data.local.ArticleEntity
 import com.dennymathew.newstime.ui.theme.NewsTimeTheme
 import org.junit.Assert.assertEquals
@@ -23,6 +26,7 @@ class HeadlinesScreenTest {
     private val openedUris = mutableListOf<String>()
     private var refreshes = 0
     private var errorsShown = 0
+    private val selectedCategories = mutableListOf<NewsCategory>()
 
     private fun setScreen(state: HeadlinesUiState) {
         composeRule.setContent {
@@ -31,6 +35,7 @@ class HeadlinesScreenTest {
                     state = state,
                     onRefresh = { refreshes++ },
                     onErrorShown = { errorsShown++ },
+                    onCategorySelected = { selectedCategories += it },
                     onArticleClick = { openedUris += it.url }
                 )
             }
@@ -60,6 +65,23 @@ class HeadlinesScreenTest {
         setScreen(HeadlinesUiState(articles = listOf(article(1, publishedAtMillis = null))))
 
         composeRule.onNodeWithText("Associated Press").assertExists()
+    }
+
+    @Test
+    fun showsCategoryChipsWithCurrentOneSelected() {
+        setScreen(HeadlinesUiState(category = NewsCategory.Business))
+
+        composeRule.onNodeWithText("Top").assertIsNotSelected()
+        composeRule.onNodeWithText("Business").assertIsSelected()
+    }
+
+    @Test
+    fun tappingChipSelectsCategory() {
+        setScreen(HeadlinesUiState())
+
+        composeRule.onNodeWithText("Technology").performClick()
+
+        assertEquals(listOf(NewsCategory.Technology), selectedCategories)
     }
 
     @Test
@@ -109,6 +131,7 @@ class HeadlinesScreenTest {
     }
 
     private fun article(id: Int, publishedAtMillis: Long? = null) = ArticleEntity(
+        category = NewsCategory.Top.name,
         url = "https://example.com/$id",
         title = "Headline $id",
         description = "Summary $id",

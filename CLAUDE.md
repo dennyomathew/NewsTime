@@ -22,10 +22,12 @@ CI (`.github/workflows/android.yml`) runs all three on pushes to `main` and on p
 
 ## Architecture
 
-- `data/NewsRepository`: Room is the single source of truth (`articles: Flow`). `refresh()`
-  skips the network if the last refresh (persisted in DataStore via `RefreshTimeStore`) is
-  under an hour old and the cache isn't empty.
-- `data/local`: `ArticleEntity` keyed by URL, ordered by `position`. The database uses
+- `data/NewsCategory`: the feeds behind the category chips. `Top` is the Associated Press
+  source; the rest are News API US categories (`sources` can't be combined with `category`).
+- `data/NewsRepository`: Room is the single source of truth (`articles(category): Flow`).
+  `refresh(category)` skips the network if that category's last refresh (persisted in
+  DataStore via `RefreshTimeStore`) is under an hour old and its cache isn't empty.
+- `data/local`: `ArticleEntity` keyed by (category, URL), ordered by `position`. The database uses
   destructive migration because it only caches headlines; turn on schema export and add real
   migrations before storing anything users create (e.g. saved articles).
 - `ui/headlines`: `HeadlinesViewModel` exposes `HeadlinesUiState`; `HeadlinesScreen` is

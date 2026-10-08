@@ -8,14 +8,22 @@ import okhttp3.ResponseBody.Companion.toResponseBody
 import retrofit2.HttpException
 import retrofit2.Response
 
-class FakeNewsApi : NewsApi {
-    var requests = 0
-        private set
-    var onGetTopHeadlines: () -> TopHeadlinesResponse = { headlines(1..3) }
+/** The query parameters of one top-headlines request. */
+data class HeadlinesRequest(val sources: String?, val category: String?, val country: String?)
 
-    override suspend fun getTopHeadlines(sources: String): TopHeadlinesResponse {
-        requests++
-        return onGetTopHeadlines()
+class FakeNewsApi : NewsApi {
+    val calls = mutableListOf<HeadlinesRequest>()
+    val requests: Int get() = calls.size
+    var onGetTopHeadlines: (HeadlinesRequest) -> TopHeadlinesResponse = { headlines(1..3) }
+
+    override suspend fun getTopHeadlines(
+        sources: String?,
+        category: String?,
+        country: String?
+    ): TopHeadlinesResponse {
+        val request = HeadlinesRequest(sources, category, country)
+        calls += request
+        return onGetTopHeadlines(request)
     }
 }
 

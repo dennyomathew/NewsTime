@@ -8,21 +8,22 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ArticleDao {
-    @Query("SELECT * FROM articles ORDER BY position ASC")
-    fun observeArticles(): Flow<List<ArticleEntity>>
+    @Query("SELECT * FROM articles WHERE category = :category ORDER BY position ASC")
+    fun observeArticles(category: String): Flow<List<ArticleEntity>>
 
-    @Query("SELECT COUNT(*) FROM articles")
-    suspend fun count(): Int
+    @Query("SELECT COUNT(*) FROM articles WHERE category = :category")
+    suspend fun count(category: String): Int
 
     @Upsert
     suspend fun upsertAll(articles: List<ArticleEntity>)
 
-    @Query("DELETE FROM articles")
-    suspend fun clearAll()
+    @Query("DELETE FROM articles WHERE category = :category")
+    suspend fun clear(category: String)
 
+    /** Replaces one category's articles, leaving other categories' caches alone. */
     @Transaction
-    suspend fun replaceAll(articles: List<ArticleEntity>) {
-        clearAll()
+    suspend fun replaceAll(category: String, articles: List<ArticleEntity>) {
+        clear(category)
         upsertAll(articles)
     }
 }

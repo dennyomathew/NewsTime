@@ -1,11 +1,12 @@
 package com.dennymathew.newstime.data.local
 
 import androidx.room.Entity
-import androidx.room.PrimaryKey
 
-@Entity(tableName = "articles")
+/** One headline within one [category] feed; the same story can appear in several feeds. */
+@Entity(tableName = "articles", primaryKeys = ["category", "url"])
 data class ArticleEntity(
-    @PrimaryKey val url: String,
+    val category: String,
+    val url: String,
     val title: String,
     val description: String?,
     val author: String?,
