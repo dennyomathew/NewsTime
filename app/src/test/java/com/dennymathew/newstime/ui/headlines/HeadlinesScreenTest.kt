@@ -6,6 +6,8 @@ import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.onNodeWithText
@@ -120,6 +122,22 @@ class HeadlinesScreenTest {
     }
 
     @Test
+    fun imageThatHasNotLoaded_takesNoSpace() {
+        // Article 2 has an image link that won't load in tests; it must not reserve a gap.
+        setScreen(
+            HeadlinesUiState(
+                articles = listOf(
+                    article(1),
+                    article(2).copy(imageUrl = "https://example.invalid/2.jpg")
+                )
+            )
+        )
+
+        assertEquals(gapBetween("Associated Press", "Summary 1", index = 0),
+            gapBetween("Associated Press", "Summary 2", index = 1))
+    }
+
+    @Test
     fun showsEmptyStateWhenNothingIsCached() {
         setScreen(HeadlinesUiState())
 
@@ -163,6 +181,13 @@ class HeadlinesScreenTest {
         composeRule.waitForIdle()
 
         assertTrue(refreshes > 0)
+    }
+
+    /** Vertical distance from the [index]-th node with [aboveText] to the node with [belowText]. */
+    private fun gapBetween(aboveText: String, belowText: String, index: Int): Float {
+        val above = composeRule.onAllNodesWithText(aboveText)[index].getUnclippedBoundsInRoot()
+        val below = composeRule.onNodeWithText(belowText).getUnclippedBoundsInRoot()
+        return (below.top - above.bottom).value
     }
 
     private fun article(id: Int, publishedAtMillis: Long? = null) = ArticleEntity(
