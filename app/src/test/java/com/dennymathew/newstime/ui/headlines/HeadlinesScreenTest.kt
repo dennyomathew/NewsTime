@@ -1,8 +1,13 @@
 package com.dennymathew.newstime.ui.headlines
 
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
@@ -28,17 +33,22 @@ class HeadlinesScreenTest {
     private var errorsShown = 0
     private val selectedCategories = mutableListOf<NewsCategory>()
 
-    private fun setScreen(state: HeadlinesUiState) {
-        composeRule.setContent {
-            NewsTimeTheme {
-                HeadlinesScreen(
-                    state = state,
-                    onRefresh = { refreshes++ },
-                    onErrorShown = { errorsShown++ },
-                    onCategorySelected = { selectedCategories += it },
-                    onArticleClick = { openedUris += it.url }
-                )
-            }
+    // Most tests start from a loaded cache; pass loaded = false to test the loading frame.
+    private fun setScreen(state: HeadlinesUiState, loaded: Boolean = true) {
+        val shown = if (loaded) state.copy(isLoaded = true) else state
+        composeRule.setContent { Screen(shown) }
+    }
+
+    @Composable
+    private fun Screen(state: HeadlinesUiState) {
+        NewsTimeTheme {
+            HeadlinesScreen(
+                state = state,
+                onRefresh = { refreshes++ },
+                onErrorShown = { errorsShown++ },
+                onCategorySelected = { selectedCategories += it },
+                onArticleClick = { openedUris += it.url }
+            )
         }
     }
 
@@ -65,6 +75,31 @@ class HeadlinesScreenTest {
         setScreen(HeadlinesUiState(articles = listOf(article(1, publishedAtMillis = null))))
 
         composeRule.onNodeWithText("Associated Press").assertExists()
+    }
+
+    @Test
+    fun scrollPosition_survivesSaveAndRestore() {
+        val restorationTester = StateRestorationTester(composeRule)
+        val articles = (1..30).map { article(it) }
+        restorationTester.setContent {
+            Screen(HeadlinesUiState(isLoaded = true, articles = articles))
+        }
+        composeRule.onNodeWithTag(ARTICLE_LIST_TAG).performScrollToIndex(20)
+        composeRule.onNodeWithText("Headline 21").assertIsDisplayed()
+
+        // What happens when Android reclaims the app while an article is open.
+        restorationTester.emulateSavedInstanceStateRestore()
+
+        composeRule.onNodeWithText("Headline 21").assertIsDisplayed()
+        composeRule.onNodeWithText("Headline 1").assertDoesNotExist()
+    }
+
+    @Test
+    fun beforeCacheIsRead_showsNeitherListNorEmptyState() {
+        setScreen(HeadlinesUiState(), loaded = false)
+
+        composeRule.onNodeWithText("No headlines yet. Pull down to refresh.").assertDoesNotExist()
+        composeRule.onNodeWithTag(ARTICLE_LIST_TAG).assertDoesNotExist()
     }
 
     @Test

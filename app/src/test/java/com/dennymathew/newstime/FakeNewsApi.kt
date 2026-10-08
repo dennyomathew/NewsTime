@@ -31,13 +31,15 @@ fun articleDto(
     id: Int,
     url: String? = "https://example.com/$id",
     title: String? = "Headline $id",
-    publishedAt: String? = "2026-10-06T21:30:00Z"
+    publishedAt: String? = "2026-10-06T21:30:00Z",
+    urlToImage: String? = null,
+    sourceName: String? = "Associated Press"
 ) = ArticleDto(
-    source = SourceDto(id = "associated-press", name = "Associated Press"),
+    source = SourceDto(id = "associated-press", name = sourceName),
     title = title,
     url = url,
     description = "Summary $id",
-    urlToImage = null,
+    urlToImage = urlToImage,
     publishedAt = publishedAt
 )
 

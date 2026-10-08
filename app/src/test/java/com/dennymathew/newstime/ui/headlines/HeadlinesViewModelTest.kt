@@ -1,7 +1,9 @@
 package com.dennymathew.newstime.ui.headlines
 
+import androidx.lifecycle.SavedStateHandle
 import com.dennymathew.newstime.FakeNewsApi
 import com.dennymathew.newstime.FakeRefreshTimeStore
+import com.dennymathew.newstime.HeadlinesRequest
 import com.dennymathew.newstime.data.NewsCategory
 import com.dennymathew.newstime.data.NewsRepository
 import com.dennymathew.newstime.data.local.NewsDatabase
@@ -19,6 +21,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -32,6 +35,7 @@ class HeadlinesViewModelTest {
     private val dispatcher = UnconfinedTestDispatcher()
     private lateinit var database: NewsDatabase
     private val api = FakeNewsApi()
+    private val savedState = SavedStateHandle()
 
     @Before
     fun setUp() {
@@ -46,7 +50,10 @@ class HeadlinesViewModelTest {
     }
 
     private fun viewModel() =
-        HeadlinesViewModel(NewsRepository(api, database.articleDao(), FakeRefreshTimeStore()))
+        HeadlinesViewModel(
+            NewsRepository(api, database.articleDao(), FakeRefreshTimeStore()),
+            savedState
+        )
 
     @Test
     fun init_loadsHeadlines() = runTest(dispatcher) {
@@ -120,6 +127,37 @@ class HeadlinesViewModelTest {
 
         assertEquals(2, api.requests) // Top on start, Sports once; Top again is cached
         assertEquals(3, vm.uiState.value.articles.size)
+    }
+
+    @Test
+    fun selectedCategory_isSavedForRestore() = runTest(dispatcher) {
+        val vm = viewModel()
+
+        vm.selectCategory(NewsCategory.Health)
+
+        assertEquals("Health", savedState.get<String>("category"))
+    }
+
+    @Test
+    fun restoredViewModel_reopensSavedCategory() = runTest(dispatcher) {
+        // As after Android reclaimed the app while an article was open.
+        savedState["category"] = "Science"
+
+        val vm = viewModel()
+        vm.uiState.launchIn(backgroundScope)
+
+        assertEquals(NewsCategory.Science, vm.uiState.value.category)
+        assertEquals(HeadlinesRequest(null, "science", "us"), api.calls.single())
+    }
+
+    @Test
+    fun uiState_isLoadedOnceCacheIsRead() = runTest(dispatcher) {
+        val vm = viewModel()
+        assertFalse(vm.uiState.value.isLoaded)
+
+        vm.uiState.launchIn(backgroundScope)
+
+        assertTrue(vm.uiState.value.isLoaded)
     }
 
     @Test

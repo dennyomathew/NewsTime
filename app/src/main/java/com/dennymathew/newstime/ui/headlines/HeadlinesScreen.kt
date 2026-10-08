@@ -4,6 +4,7 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.text.format.DateUtils
+import android.util.Log
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.clickable
@@ -16,6 +17,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,12 +35,16 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -98,6 +105,9 @@ fun HeadlinesScreen(
     modifier: Modifier = Modifier
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
+    // Keeps each category's scroll position (also across the app being reclaimed while an
+    // article is open), so coming back or switching chips returns to where you were.
+    val listStates = rememberSaveableStateHolder()
     val errorMessage = state.error?.let { stringResource(it.messageRes()) }
     LaunchedEffect(errorMessage) {
         if (errorMessage != null) {
@@ -123,12 +133,13 @@ fun HeadlinesScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            if (state.articles.isEmpty() && !state.isRefreshing) {
-                EmptyState(Modifier.align(Alignment.Center))
-            } else {
-                // A fresh list (and scroll position) per category.
-                key(state.category) {
-                    ArticleList(state.articles, onArticleClick)
+            when {
+                // Drawing an empty list before the cache is read would reset the saved position.
+                !state.isLoaded -> Unit
+                state.articles.isEmpty() && !state.isRefreshing ->
+                    EmptyState(Modifier.align(Alignment.Center))
+                else -> listStates.SaveableStateProvider(state.category.name) {
+                    ArticleList(state.articles, rememberLazyListState(), onArticleClick)
                 }
             }
         }
@@ -152,9 +163,16 @@ private fun CategoryChips(selected: NewsCategory, onSelected: (NewsCategory) -> 
 }
 
 @Composable
-private fun ArticleList(articles: List<ArticleEntity>, onArticleClick: (ArticleEntity) -> Unit) {
+private fun ArticleList(
+    articles: List<ArticleEntity>,
+    listState: LazyListState,
+    onArticleClick: (ArticleEntity) -> Unit
+) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        state = listState,
+        modifier = Modifier
+            .fillMaxSize()
+            .testTag(ARTICLE_LIST_TAG),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -184,11 +202,19 @@ private fun ArticleCard(article: ArticleEntity, onClick: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            if (article.imageUrl != null) {
+            // Some links in News API data don't load (blocked, moved or not an image); rather
+            // than leave an empty box, the card drops the image once loading fails.
+            var imageFailed by remember(article.imageUrl) { mutableStateOf(false) }
+            if (article.imageUrl != null && !imageFailed) {
                 AsyncImage(
                     model = article.imageUrl,
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
+                    placeholder = ColorPainter(MaterialTheme.colorScheme.surfaceVariant),
+                    onError = { error ->
+                        Log.w(TAG, "Image failed: ${article.imageUrl}", error.result.throwable)
+                        imageFailed = true
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(200.dp)
@@ -206,6 +232,9 @@ private fun ArticleCard(article: ArticleEntity, onClick: () -> Unit) {
         }
     }
 }
+
+internal const val ARTICLE_LIST_TAG = "articleList"
+private const val TAG = "HeadlinesScreen"
 
 /** "Associated Press · 2 hours ago", or whichever part is known. */
 @Composable

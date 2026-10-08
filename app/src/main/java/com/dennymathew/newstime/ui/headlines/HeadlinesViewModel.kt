@@ -1,5 +1,6 @@
 package com.dennymathew.newstime.ui.headlines
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dennymathew.newstime.data.NewsCategory
@@ -24,6 +25,8 @@ import javax.inject.Inject
 
 data class HeadlinesUiState(
     val category: NewsCategory = NewsCategory.Top,
+    /** False until the cached articles for [category] have been read at least once. */
+    val isLoaded: Boolean = false,
     val articles: List<ArticleEntity> = emptyList(),
     val isRefreshing: Boolean = false,
     val error: HeadlinesError? = null
@@ -34,21 +37,33 @@ enum class HeadlinesError { Network, Unauthorized, Server }
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HeadlinesViewModel @Inject constructor(
-    private val repository: NewsRepository
+    private val repository: NewsRepository,
+    private val savedState: SavedStateHandle
 ) : ViewModel() {
 
-    private val status = MutableStateFlow(HeadlinesUiState())
+    // The selected chip survives the app being reclaimed while an article is open.
+    private val status = MutableStateFlow(
+        HeadlinesUiState(
+            category = savedState.get<String>(KEY_CATEGORY)
+                ?.let { name -> NewsCategory.entries.firstOrNull { it.name == name } }
+                ?: NewsCategory.Top
+        )
+    )
     private var refreshJob: Job? = null
 
     val uiState: StateFlow<HeadlinesUiState> =
         combine(
             status.map { it.category }.distinctUntilChanged()
-                .flatMapLatest { repository.articles(it) },
+                .flatMapLatest { category -> repository.articles(category).map { category to it } },
             status
-        ) { articles, status ->
-            // Ignore a list still emitted for the previous category during a switch.
-            status.copy(articles = articles.filter { it.category == status.category.name })
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HeadlinesUiState())
+        ) { (listCategory, articles), status ->
+            // During a switch the previous category's list can still arrive; ignore it.
+            if (listCategory == status.category) {
+                status.copy(isLoaded = true, articles = articles)
+            } else {
+                status
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), status.value)
 
     init {
         refresh(force = false)
@@ -57,6 +72,7 @@ class HeadlinesViewModel @Inject constructor(
     fun selectCategory(category: NewsCategory) {
         if (category == status.value.category) return
         refreshJob?.cancel()
+        savedState[KEY_CATEGORY] = category.name
         status.value = HeadlinesUiState(category = category)
         refresh(force = false)
     }
@@ -80,5 +96,9 @@ class HeadlinesViewModel @Inject constructor(
 
     fun errorShown() {
         status.update { it.copy(error = null) }
+    }
+
+    private companion object {
+        const val KEY_CATEGORY = "category"
     }
 }

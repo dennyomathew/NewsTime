@@ -234,6 +234,55 @@ class NewsRepositoryTest {
         assertEquals(2, api.requests)
     }
 
+    @Test
+    fun imageUrls_areMadeLoadable() = runTest {
+        api.onGetTopHeadlines = { _ ->
+            TopHeadlinesResponse(
+                articles = listOf(
+                    articleDto(1, urlToImage = "https://img.example.com/1.jpg"),
+                    articleDto(2, urlToImage = "http://img.example.com/2.jpg"),
+                    articleDto(3, urlToImage = "//img.example.com/3.jpg"),
+                    articleDto(4, urlToImage = "  "),
+                    articleDto(5, urlToImage = "not a url")
+                )
+            )
+        }
+
+        repository.refresh(Top)
+
+        assertEquals(
+            listOf(
+                "https://img.example.com/1.jpg",
+                "https://img.example.com/2.jpg",
+                "https://img.example.com/3.jpg",
+                null,
+                null
+            ),
+            repository.articles(Top).first().map { it.imageUrl }
+        )
+    }
+
+    @Test
+    fun sourceNamesThatAreLinks_showJustTheSite() = runTest {
+        api.onGetTopHeadlines = { _ ->
+            TopHeadlinesResponse(
+                articles = listOf(
+                    articleDto(1, sourceName = "Associated Press"),
+                    articleDto(2, sourceName = "http://mp1st.com/category/news"),
+                    articleDto(3, sourceName = "https://www.example.com"),
+                    articleDto(4, sourceName = " ")
+                )
+            )
+        }
+
+        repository.refresh(Top)
+
+        assertEquals(
+            listOf("Associated Press", "mp1st.com", "example.com", null),
+            repository.articles(Top).first().map { it.sourceName }
+        )
+    }
+
     @Test(expected = HttpException::class)
     fun httpErrors_propagate() = runTest {
         api.onGetTopHeadlines = { _ -> throw httpError(401) }

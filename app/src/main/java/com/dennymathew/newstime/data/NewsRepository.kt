@@ -63,11 +63,34 @@ class NewsRepository(
             title = title ?: return null,
             description = description,
             author = author,
-            sourceName = source?.name,
-            imageUrl = urlToImage,
+            sourceName = cleanSourceName(source?.name),
+            imageUrl = normalizeImageUrl(urlToImage),
             publishedAtMillis = publishedAt?.let(::parseInstantMillis),
             position = position
         )
+    }
+
+    /**
+     * News API image links sometimes lack a scheme (`//host/...`) or use `http://`, which
+     * Android blocks by default; both become `https://`. Anything else unusable is dropped.
+     */
+    internal fun normalizeImageUrl(raw: String?): String? {
+        val url = raw?.trim().orEmpty()
+        return when {
+            url.startsWith("https://") -> url
+            url.startsWith("http://") -> "https://" + url.removePrefix("http://")
+            url.startsWith("//") -> "https:$url"
+            else -> null
+        }
+    }
+
+    /** Some sources are named by a link (`http://mp1st.com/category/news`); show just the site. */
+    internal fun cleanSourceName(raw: String?): String? {
+        val name = raw?.trim().orEmpty()
+        if (name.isEmpty()) return null
+        if (!name.startsWith("http://") && !name.startsWith("https://")) return name
+        return name.substringAfter("://").substringBefore('/').removePrefix("www.")
+            .ifEmpty { null }
     }
 
     private fun parseInstantMillis(value: String): Long? =
