@@ -11,6 +11,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -45,6 +48,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -77,6 +81,9 @@ fun HeadlinesRoute(viewModel: HeadlinesViewModel = hiltViewModel()) {
 /** Opens [url] in a Chrome Custom Tab, falling back to any app that can view it. */
 private fun Context.openInCustomTab(url: String, toolbarColor: Int) {
     val uri = url.toUri()
+    // Links come from News API (untrusted); never hand other schemes (intent:, file:, ...)
+    // to the system. The repository already drops such articles; this is a second guard.
+    if (uri.scheme?.lowercase() !in setOf("http", "https")) return
     val customTab = CustomTabsIntent.Builder()
         .setDefaultColorSchemeParams(
             CustomTabColorSchemeParams.Builder().setToolbarColor(toolbarColor).build()
@@ -126,12 +133,22 @@ fun HeadlinesScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
+        // Edge-to-edge: only the top bar's space is padded; the list draws behind the
+        // navigation bar and gets the bottom/side insets as contentPadding instead.
+        val layoutDirection = LocalLayoutDirection.current
+        val listPadding = PaddingValues(
+            start = padding.calculateStartPadding(layoutDirection) + 16.dp,
+            top = 16.dp,
+            end = padding.calculateEndPadding(layoutDirection) + 16.dp,
+            bottom = padding.calculateBottomPadding() + 16.dp
+        )
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,
             onRefresh = onRefresh,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(top = padding.calculateTopPadding())
+                .consumeWindowInsets(padding)
         ) {
             when {
                 // Drawing an empty list before the cache is read would reset the saved position.
@@ -139,7 +156,7 @@ fun HeadlinesScreen(
                 state.articles.isEmpty() && !state.isRefreshing ->
                     EmptyState(Modifier.align(Alignment.Center))
                 else -> listStates.SaveableStateProvider(state.category.name) {
-                    ArticleList(state.articles, rememberLazyListState(), onArticleClick)
+                    ArticleList(state.articles, rememberLazyListState(), listPadding, onArticleClick)
                 }
             }
         }
@@ -166,6 +183,7 @@ private fun CategoryChips(selected: NewsCategory, onSelected: (NewsCategory) -> 
 private fun ArticleList(
     articles: List<ArticleEntity>,
     listState: LazyListState,
+    contentPadding: PaddingValues,
     onArticleClick: (ArticleEntity) -> Unit
 ) {
     LazyColumn(
@@ -173,7 +191,7 @@ private fun ArticleList(
         modifier = Modifier
             .fillMaxSize()
             .testTag(ARTICLE_LIST_TAG),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(articles, key = { it.url }) { article ->

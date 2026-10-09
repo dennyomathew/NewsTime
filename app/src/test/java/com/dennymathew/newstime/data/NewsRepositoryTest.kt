@@ -283,6 +283,29 @@ class NewsRepositoryTest {
         )
     }
 
+    @Test
+    fun articlesWithoutWebLinks_areDropped() = runTest {
+        api.onGetTopHeadlines = { _ ->
+            TopHeadlinesResponse(
+                articles = listOf(
+                    articleDto(1, url = "https://example.com/1"),
+                    articleDto(2, url = "HTTP://example.com/2"),
+                    articleDto(3, url = "intent://evil#Intent;package=com.example;end"),
+                    articleDto(4, url = "file:///data/data/secret"),
+                    articleDto(5, url = "javascript:alert(1)"),
+                    articleDto(6, url = "market://details?id=com.example")
+                )
+            )
+        }
+
+        repository.refresh(Top)
+
+        assertEquals(
+            listOf("https://example.com/1", "HTTP://example.com/2"),
+            repository.articles(Top).first().map { it.url }
+        )
+    }
+
     @Test(expected = HttpException::class)
     fun httpErrors_propagate() = runTest {
         api.onGetTopHeadlines = { _ -> throw httpError(401) }

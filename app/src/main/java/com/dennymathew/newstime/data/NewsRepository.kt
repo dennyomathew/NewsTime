@@ -59,7 +59,8 @@ class NewsRepository(
     private fun ArticleDto.toEntity(category: NewsCategory, position: Int): ArticleEntity? {
         return ArticleEntity(
             category = category.name,
-            url = url ?: return null,
+            // Only web links are kept: the app opens this URL when the article is tapped.
+            url = url?.trim()?.takeIf(::isWebUrl) ?: return null,
             title = title ?: return null,
             description = description,
             author = author,
@@ -69,6 +70,9 @@ class NewsRepository(
             position = position
         )
     }
+
+    private fun isWebUrl(url: String): Boolean =
+        url.startsWith("https://", ignoreCase = true) || url.startsWith("http://", ignoreCase = true)
 
     /**
      * News API image links sometimes lack a scheme (`//host/...`) or use `http://`, which

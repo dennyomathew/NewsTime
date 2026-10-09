@@ -1,3 +1,4 @@
+import com.android.build.api.variant.BuildConfigField
 import java.util.Properties
 
 plugins {
@@ -28,7 +29,6 @@ android {
         targetSdk = 37
         versionCode = 2
         versionName = "2.0"
-        buildConfigField("String", "API_KEY", "\"$newsApiKey\"")
     }
 
     buildTypes {
@@ -56,6 +56,16 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+}
+
+// AGP 9 variant API for custom BuildConfig fields. String values must include the quotes.
+androidComponents {
+    onVariants { variant ->
+        variant.buildConfigFields?.put(
+            "API_KEY",
+            BuildConfigField("String", "\"$newsApiKey\"", "News API key from local.properties")
+        )
     }
 }
 
