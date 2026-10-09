@@ -49,6 +49,12 @@ CI (`.github/workflows/android.yml`) runs all three on pushes to `main` and on p
   showing the old image for a while.
 - Dependabot opens weekly update PRs (`.github/dependabot.yml`); merge them when CI is green.
 
+## Android skills
+
+- `.claude/skills/` holds Google's Android agent skills (edge-to-edge, intent security, testing
+  setup, AGP 9, adaptive layouts); see `.claude/skills/README.md`. Follow them when touching
+  those areas, and review new UI against `edge-to-edge` and `testing-setup`.
+
 ## Git workflow
 
 - One branch per pull request, named after the work (e.g. `claude/category-chips`), created
