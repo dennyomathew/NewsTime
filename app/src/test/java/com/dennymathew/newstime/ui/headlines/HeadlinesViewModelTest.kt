@@ -51,7 +51,12 @@ class HeadlinesViewModelTest {
 
     private fun viewModel() =
         HeadlinesViewModel(
-            NewsRepository(api, database.articleDao(), FakeRefreshTimeStore()),
+            NewsRepository(
+                api,
+                database.articleDao(),
+                database.savedArticleDao(),
+                FakeRefreshTimeStore()
+            ),
             savedState
         )
 
@@ -158,6 +163,87 @@ class HeadlinesViewModelTest {
         vm.uiState.launchIn(backgroundScope)
 
         assertTrue(vm.uiState.value.isLoaded)
+    }
+
+    @Test
+    fun toggleSaved_marksArticleSaved() = runTest(dispatcher) {
+        val vm = viewModel()
+        vm.uiState.launchIn(backgroundScope)
+
+        vm.toggleSaved(vm.uiState.value.articles.first())
+
+        assertEquals(setOf("https://example.com/1"), vm.uiState.value.savedUrls)
+
+        vm.toggleSaved(vm.uiState.value.articles.first())
+
+        assertEquals(emptySet<String>(), vm.uiState.value.savedUrls)
+    }
+
+    @Test
+    fun selectSaved_showsSavedArticlesAndKeepsCategory() = runTest(dispatcher) {
+        val vm = viewModel()
+        vm.uiState.launchIn(backgroundScope)
+        vm.selectCategory(NewsCategory.Sports)
+        vm.toggleSaved(vm.uiState.value.articles[1])
+
+        vm.selectSaved()
+
+        val state = vm.uiState.value
+        assertTrue(state.showingSaved)
+        assertTrue(state.isLoaded)
+        assertEquals(NewsCategory.Sports, state.category)
+        assertEquals(listOf("Headline 2"), state.savedArticles.map { it.title })
+        assertEquals(true, savedState.get<Boolean>("showingSaved"))
+    }
+
+    @Test
+    fun selectSaved_withNothingSaved_isLoadedAndEmpty() = runTest(dispatcher) {
+        val vm = viewModel()
+        vm.uiState.launchIn(backgroundScope)
+
+        vm.selectSaved()
+
+        val state = vm.uiState.value
+        assertTrue(state.isLoaded)
+        assertEquals(emptyList<Any>(), state.savedArticles)
+    }
+
+    @Test
+    fun savedView_worksOffline() = runTest(dispatcher) {
+        val vm = viewModel()
+        vm.uiState.launchIn(backgroundScope)
+        vm.toggleSaved(vm.uiState.value.articles.first())
+        api.onGetTopHeadlines = { throw IOException("offline") }
+
+        vm.refresh()
+        vm.selectSaved()
+
+        assertEquals(listOf("Headline 1"), vm.uiState.value.savedArticles.map { it.title })
+    }
+
+    @Test
+    fun selectingSameCategoryFromSaved_returnsWithoutRefetching() = runTest(dispatcher) {
+        val vm = viewModel()
+        vm.uiState.launchIn(backgroundScope)
+        vm.selectSaved()
+
+        vm.selectCategory(NewsCategory.Top)
+
+        val state = vm.uiState.value
+        assertFalse(state.showingSaved)
+        assertEquals(3, state.articles.size)
+        assertEquals(1, api.requests)
+        assertEquals(false, savedState.get<Boolean>("showingSaved"))
+    }
+
+    @Test
+    fun restoredViewModel_reopensSavedView() = runTest(dispatcher) {
+        savedState["showingSaved"] = true
+
+        val vm = viewModel()
+        vm.uiState.launchIn(backgroundScope)
+
+        assertTrue(vm.uiState.value.showingSaved)
     }
 
     @Test

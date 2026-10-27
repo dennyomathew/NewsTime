@@ -1,0 +1,75 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 3,
+    "identityHash": "8161085538eb9938cbc7890d3f8fcd2b",
+    "entities": [
+      {
+        "tableName": "articles",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`category` TEXT NOT NULL, `url` TEXT NOT NULL, `title` TEXT NOT NULL, `description` TEXT, `author` TEXT, `sourceName` TEXT, `imageUrl` TEXT, `publishedAtMillis` INTEGER, `position` INTEGER NOT NULL, PRIMARY KEY(`category`, `url`))",
+        "fields": [
+          {
+            "fieldPath": "category",
+            "columnName": "category",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "url",
+            "columnName": "url",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "description",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "author",
+            "columnName": "author",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "sourceName",
+            "columnName": "sourceName",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "imageUrl",
+            "columnName": "imageUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "publishedAtMillis",
+            "columnName": "publishedAtMillis",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "position",
+            "columnName": "position",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "category",
+            "url"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '8161085538eb9938cbc7890d3f8fcd2b')"
+    ]
+  }
+}

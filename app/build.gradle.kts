@@ -53,10 +53,20 @@ android {
             )
         }
     }
+    sourceSets {
+        // Room schemas for migration tests. Robolectric can't see unit-test assets, so they go
+        // in debug assets (a few KB in debug builds only; release builds don't include them).
+        getByName("debug").assets.srcDir("$projectDir/schemas")
+    }
     buildFeatures {
         compose = true
         buildConfig = true
     }
+}
+
+// Room schema history, used by migration tests; commit new schema files with each version bump.
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 // AGP 9 variant API for custom BuildConfig fields. String values must include the quotes.
@@ -104,6 +114,7 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.room.testing)
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.androidx.compose.ui.test.junit4)
 }

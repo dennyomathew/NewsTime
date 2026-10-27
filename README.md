@@ -1,7 +1,8 @@
 # NewsTime
 
 Top headlines from [News API](https://newsapi.org/) by category (Top, Business, Technology,
-Sports, Entertainment, Health, Science), cached offline.
+Sports, Entertainment, Health, Science), cached offline. Bookmark a headline to keep it under
+**Saved**, readable offline even after it drops out of the feed.
 
 <img src="docs/screenshot-categories.webp" alt="NewsTime headlines screen" width="320">
 

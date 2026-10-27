@@ -5,12 +5,15 @@ import android.content.Context
 import android.content.Intent
 import android.text.format.DateUtils
 import android.util.Log
+import androidx.annotation.StringRes
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -28,6 +31,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -49,6 +54,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -61,6 +67,7 @@ import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
 import com.dennymathew.newstime.R
 import com.dennymathew.newstime.data.NewsCategory
+import com.dennymathew.newstime.data.local.ArticleContent
 import com.dennymathew.newstime.data.local.ArticleEntity
 import com.dennymathew.newstime.ui.theme.NewsTimeTheme
 
@@ -74,6 +81,8 @@ fun HeadlinesRoute(viewModel: HeadlinesViewModel = hiltViewModel()) {
         onRefresh = viewModel::refresh,
         onErrorShown = viewModel::errorShown,
         onCategorySelected = viewModel::selectCategory,
+        onSavedSelected = viewModel::selectSaved,
+        onToggleSaved = viewModel::toggleSaved,
         onArticleClick = { article -> context.openInCustomTab(article.url, toolbarColor) }
     )
 }
@@ -108,7 +117,9 @@ fun HeadlinesScreen(
     onRefresh: () -> Unit,
     onErrorShown: () -> Unit,
     onCategorySelected: (NewsCategory) -> Unit,
-    onArticleClick: (ArticleEntity) -> Unit,
+    onSavedSelected: () -> Unit,
+    onToggleSaved: (ArticleContent) -> Unit,
+    onArticleClick: (ArticleContent) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -128,7 +139,12 @@ fun HeadlinesScreen(
         topBar = {
             Column {
                 TopAppBar(title = { Text(stringResource(R.string.app_title)) })
-                CategoryChips(selected = state.category, onSelected = onCategorySelected)
+                CategoryChips(
+                    selected = state.category.takeUnless { state.showingSaved },
+                    onSelected = onCategorySelected,
+                    savedSelected = state.showingSaved,
+                    onSavedSelected = onSavedSelected
+                )
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -142,30 +158,66 @@ fun HeadlinesScreen(
             end = padding.calculateEndPadding(layoutDirection) + 16.dp,
             bottom = padding.calculateBottomPadding() + 16.dp
         )
-        PullToRefreshBox(
-            isRefreshing = state.isRefreshing,
-            onRefresh = onRefresh,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = padding.calculateTopPadding())
-                .consumeWindowInsets(padding)
-        ) {
-            when {
-                // Drawing an empty list before the cache is read would reset the saved position.
-                !state.isLoaded -> Unit
-                state.articles.isEmpty() && !state.isRefreshing ->
-                    EmptyState(Modifier.align(Alignment.Center))
-                else -> listStates.SaveableStateProvider(state.category.name) {
-                    ArticleList(state.articles, rememberLazyListState(), listPadding, onArticleClick)
+        val contentModifier = Modifier
+            .fillMaxSize()
+            .padding(top = padding.calculateTopPadding())
+            .consumeWindowInsets(padding)
+        if (state.showingSaved) {
+            // Saved articles live only in the database: nothing to pull to refresh.
+            Box(contentModifier) {
+                when {
+                    !state.isLoaded -> Unit
+                    state.savedArticles.isEmpty() ->
+                        EmptyState(R.string.saved_empty, Modifier.align(Alignment.Center))
+                    else -> listStates.SaveableStateProvider(SAVED_LIST_KEY) {
+                        ArticleList(
+                            articles = state.savedArticles,
+                            savedUrls = state.savedUrls,
+                            listState = rememberLazyListState(),
+                            contentPadding = listPadding,
+                            onArticleClick = onArticleClick,
+                            onToggleSaved = onToggleSaved
+                        )
+                    }
+                }
+            }
+        } else {
+            PullToRefreshBox(
+                isRefreshing = state.isRefreshing,
+                onRefresh = onRefresh,
+                modifier = contentModifier
+            ) {
+                when {
+                    // Drawing an empty list before the cache is read would reset the saved position.
+                    !state.isLoaded -> Unit
+                    state.articles.isEmpty() && !state.isRefreshing ->
+                        EmptyState(R.string.headlines_empty, Modifier.align(Alignment.Center))
+                    else -> listStates.SaveableStateProvider(state.category.name) {
+                        ArticleList(
+                            articles = state.articles,
+                            savedUrls = state.savedUrls,
+                            listState = rememberLazyListState(),
+                            contentPadding = listPadding,
+                            onArticleClick = onArticleClick,
+                            onToggleSaved = onToggleSaved
+                        )
+                    }
                 }
             }
         }
     }
 }
 
+/** The category feeds, then Saved as the last chip. [selected] is null while Saved is shown. */
 @Composable
-private fun CategoryChips(selected: NewsCategory, onSelected: (NewsCategory) -> Unit) {
+private fun CategoryChips(
+    selected: NewsCategory?,
+    onSelected: (NewsCategory) -> Unit,
+    savedSelected: Boolean,
+    onSavedSelected: () -> Unit
+) {
     LazyRow(
+        modifier = Modifier.testTag(CATEGORY_CHIPS_TAG),
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -176,15 +228,24 @@ private fun CategoryChips(selected: NewsCategory, onSelected: (NewsCategory) -> 
                 label = { Text(stringResource(category.labelRes)) }
             )
         }
+        item {
+            FilterChip(
+                selected = savedSelected,
+                onClick = onSavedSelected,
+                label = { Text(stringResource(R.string.category_saved)) }
+            )
+        }
     }
 }
 
 @Composable
 private fun ArticleList(
-    articles: List<ArticleEntity>,
+    articles: List<ArticleContent>,
+    savedUrls: Set<String>,
     listState: LazyListState,
     contentPadding: PaddingValues,
-    onArticleClick: (ArticleEntity) -> Unit
+    onArticleClick: (ArticleContent) -> Unit,
+    onToggleSaved: (ArticleContent) -> Unit
 ) {
     LazyColumn(
         state = listState,
@@ -195,13 +256,23 @@ private fun ArticleList(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(articles, key = { it.url }) { article ->
-            ArticleCard(article, onClick = { onArticleClick(article) })
+            ArticleCard(
+                article = article,
+                isSaved = article.url in savedUrls,
+                onClick = { onArticleClick(article) },
+                onToggleSaved = { onToggleSaved(article) }
+            )
         }
     }
 }
 
 @Composable
-private fun ArticleCard(article: ArticleEntity, onClick: () -> Unit) {
+private fun ArticleCard(
+    article: ArticleContent,
+    isSaved: Boolean,
+    onClick: () -> Unit,
+    onToggleSaved: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -209,11 +280,15 @@ private fun ArticleCard(article: ArticleEntity, onClick: () -> Unit) {
     ) {
         // Spacing sits on each item (not spacedBy) so an image that never loads leaves no gap.
         Column(Modifier.padding(16.dp)) {
-            Text(
-                text = article.title,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.secondary
-            )
+            Row(verticalAlignment = Alignment.Top) {
+                Text(
+                    text = article.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.weight(1f)
+                )
+                SaveToggle(isSaved = isSaved, onToggle = onToggleSaved)
+            }
             articleMeta(article)?.let {
                 Text(
                     text = it,
@@ -235,6 +310,26 @@ private fun ArticleCard(article: ArticleEntity, onClick: () -> Unit) {
                 )
             }
         }
+    }
+}
+
+/** Bookmark toggle; offset so the glyph lines up with the card padding (the 48dp touch target stays). */
+@Composable
+private fun SaveToggle(isSaved: Boolean, onToggle: () -> Unit) {
+    IconToggleButton(
+        checked = isSaved,
+        onCheckedChange = { onToggle() },
+        modifier = Modifier.offset(x = 12.dp, y = (-12).dp)
+    ) {
+        Icon(
+            painter = painterResource(
+                if (isSaved) R.drawable.ic_bookmark else R.drawable.ic_bookmark_border
+            ),
+            contentDescription = stringResource(
+                if (isSaved) R.string.remove_saved_article else R.string.save_article
+            ),
+            tint = MaterialTheme.colorScheme.primary
+        )
     }
 }
 
@@ -265,11 +360,13 @@ private fun ArticleImage(imageUrl: String) {
 }
 
 internal const val ARTICLE_LIST_TAG = "articleList"
+internal const val CATEGORY_CHIPS_TAG = "categoryChips"
+private const val SAVED_LIST_KEY = "saved"
 private const val TAG = "HeadlinesScreen"
 
 /** "Associated Press · 2 hours ago", or whichever part is known. */
 @Composable
-private fun articleMeta(article: ArticleEntity): String? {
+private fun articleMeta(article: ArticleContent): String? {
     val published = article.publishedAtMillis?.let {
         DateUtils.getRelativeTimeSpanString(it, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS)
             .toString()
@@ -278,10 +375,10 @@ private fun articleMeta(article: ArticleEntity): String? {
 }
 
 @Composable
-private fun EmptyState(modifier: Modifier = Modifier) {
+private fun EmptyState(@StringRes messageRes: Int, modifier: Modifier = Modifier) {
     Box(modifier.padding(32.dp)) {
         Text(
-            text = stringResource(R.string.headlines_empty),
+            text = stringResource(messageRes),
             style = MaterialTheme.typography.bodyLarge
         )
     }
@@ -311,11 +408,14 @@ private fun HeadlinesScreenPreview() {
                         publishedAtMillis = System.currentTimeMillis() - 2 * 60 * 60 * 1000L,
                         position = 0
                     )
-                )
+                ),
+                savedUrls = setOf("https://example.com/1")
             ),
             onRefresh = {},
             onErrorShown = {},
             onCategorySelected = {},
+            onSavedSelected = {},
+            onToggleSaved = {},
             onArticleClick = {}
         )
     }

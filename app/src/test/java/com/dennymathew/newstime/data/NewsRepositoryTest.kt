@@ -16,7 +16,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -42,7 +44,13 @@ class NewsRepositoryTest {
 
     // A new instance stands in for the app being reopened: only the stores carry over.
     private fun newRepository() =
-        NewsRepository(api, database.articleDao(), refreshTimes, now = { nowMillis })
+        NewsRepository(
+            api,
+            database.articleDao(),
+            database.savedArticleDao(),
+            refreshTimes,
+            now = { nowMillis }
+        )
 
     @After
     fun tearDown() {
@@ -312,6 +320,69 @@ class NewsRepositoryTest {
 
         repository.refresh(Top)
     }
+
+    @Test
+    fun toggleSaved_savesThenRemoves() = runTest {
+        repository.refresh(Top)
+        val article = repository.articles(Top).first().first()
+
+        assertTrue(repository.toggleSaved(article))
+        assertEquals(setOf(article.url), repository.savedUrls().first())
+        assertEquals(listOf("Headline 1"), savedTitles())
+
+        assertFalse(repository.toggleSaved(article))
+        assertEquals(emptySet<String>(), repository.savedUrls().first())
+        assertEquals(emptyList<String>(), savedTitles())
+    }
+
+    @Test
+    fun savedArticle_keepsACopyOfTheHeadline() = runTest {
+        api.onGetTopHeadlines = { _ ->
+            TopHeadlinesResponse(articles = listOf(articleDto(1, urlToImage = "https://img.example.com/1.jpg")))
+        }
+        repository.refresh(Top)
+
+        repository.toggleSaved(repository.articles(Top).first().single())
+
+        val saved = repository.savedArticles().first().single()
+        assertEquals("https://example.com/1", saved.url)
+        assertEquals("Headline 1", saved.title)
+        assertEquals("Summary 1", saved.description)
+        assertEquals("Associated Press", saved.sourceName)
+        assertEquals("https://img.example.com/1.jpg", saved.imageUrl)
+        assertEquals(1_791_322_200_000L, saved.publishedAtMillis)
+        assertEquals(nowMillis, saved.savedAtMillis)
+    }
+
+    @Test
+    fun savedArticles_newestSavedFirst() = runTest {
+        repository.refresh(Top)
+        val (first, second, third) = repository.articles(Top).first()
+
+        repository.toggleSaved(second)
+        nowMillis += 1_000
+        repository.toggleSaved(first)
+        nowMillis += 1_000
+        repository.toggleSaved(third)
+
+        assertEquals(listOf("Headline 3", "Headline 1", "Headline 2"), savedTitles())
+    }
+
+    @Test
+    fun savedArticle_survivesRefreshThatDropsItFromTheFeed() = runTest {
+        api.onGetTopHeadlines = { _ -> headlines(1..3) }
+        repository.refresh(Top)
+        repository.toggleSaved(repository.articles(Top).first().first())
+
+        api.onGetTopHeadlines = { _ -> headlines(4..5) }
+        repository.refresh(Top, force = true)
+
+        assertEquals(listOf("Headline 4", "Headline 5"), titles())
+        assertEquals(listOf("Headline 1"), savedTitles())
+        assertEquals(setOf("https://example.com/1"), repository.savedUrls().first())
+    }
+
+    private suspend fun savedTitles() = repository.savedArticles().first().map { it.title }
 
     private suspend fun titles(category: NewsCategory = Top) =
         repository.articles(category).first().map { it.title }

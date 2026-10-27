@@ -1,0 +1,130 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 4,
+    "identityHash": "f603d55eb543f0a090ef055bf31d6f95",
+    "entities": [
+      {
+        "tableName": "articles",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`category` TEXT NOT NULL, `url` TEXT NOT NULL, `title` TEXT NOT NULL, `description` TEXT, `author` TEXT, `sourceName` TEXT, `imageUrl` TEXT, `publishedAtMillis` INTEGER, `position` INTEGER NOT NULL, PRIMARY KEY(`category`, `url`))",
+        "fields": [
+          {
+            "fieldPath": "category",
+            "columnName": "category",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "url",
+            "columnName": "url",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "description",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "author",
+            "columnName": "author",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "sourceName",
+            "columnName": "sourceName",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "imageUrl",
+            "columnName": "imageUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "publishedAtMillis",
+            "columnName": "publishedAtMillis",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "position",
+            "columnName": "position",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "category",
+            "url"
+          ]
+        }
+      },
+      {
+        "tableName": "saved_articles",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`url` TEXT NOT NULL, `title` TEXT NOT NULL, `description` TEXT, `author` TEXT, `sourceName` TEXT, `imageUrl` TEXT, `publishedAtMillis` INTEGER, `savedAtMillis` INTEGER NOT NULL, PRIMARY KEY(`url`))",
+        "fields": [
+          {
+            "fieldPath": "url",
+            "columnName": "url",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "description",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "author",
+            "columnName": "author",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "sourceName",
+            "columnName": "sourceName",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "imageUrl",
+            "columnName": "imageUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "publishedAtMillis",
+            "columnName": "publishedAtMillis",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "savedAtMillis",
+            "columnName": "savedAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "url"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'f603d55eb543f0a090ef055bf31d6f95')"
+    ]
+  }
+}
