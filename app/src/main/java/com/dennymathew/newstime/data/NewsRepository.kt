@@ -1,11 +1,15 @@
 package com.dennymathew.newstime.data
 
+import com.dennymathew.newstime.data.local.ArticleContent
 import com.dennymathew.newstime.data.local.ArticleDao
 import com.dennymathew.newstime.data.local.ArticleEntity
 import com.dennymathew.newstime.data.local.RefreshTimeStore
+import com.dennymathew.newstime.data.local.SavedArticleDao
+import com.dennymathew.newstime.data.local.SavedArticleEntity
 import com.dennymathew.newstime.data.remote.ArticleDto
 import com.dennymathew.newstime.data.remote.NewsApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration
@@ -16,17 +20,42 @@ import kotlin.time.Instant
 class NewsRepository(
     private val api: NewsApi,
     private val dao: ArticleDao,
+    private val savedDao: SavedArticleDao,
     private val refreshTimes: RefreshTimeStore,
     private val now: () -> Long,
     private val maxAge: Duration = 1.hours
 ) {
     @Inject
-    constructor(api: NewsApi, dao: ArticleDao, refreshTimes: RefreshTimeStore) :
-        this(api, dao, refreshTimes, System::currentTimeMillis)
+    constructor(
+        api: NewsApi,
+        dao: ArticleDao,
+        savedDao: SavedArticleDao,
+        refreshTimes: RefreshTimeStore
+    ) : this(api, dao, savedDao, refreshTimes, System::currentTimeMillis)
 
     /** Cached headlines for [category]; the database is the single source of truth. */
     fun articles(category: NewsCategory): Flow<List<ArticleEntity>> =
         dao.observeArticles(category.name)
+
+    /** Saved articles, newest saved first. They're kept when the headline cache is replaced. */
+    fun savedArticles(): Flow<List<SavedArticleEntity>> = savedDao.observeAll()
+
+    /** URLs of saved articles, for showing which headlines are bookmarked. */
+    fun savedUrls(): Flow<Set<String>> = savedDao.observeUrls().map { it.toSet() }
+
+    /** Saves a copy of [article], or removes it if it's already saved. Returns whether it's now saved. */
+    suspend fun toggleSaved(article: ArticleContent): Boolean = savedDao.toggle(
+        SavedArticleEntity(
+            url = article.url,
+            title = article.title,
+            description = article.description,
+            author = article.author,
+            sourceName = article.sourceName,
+            imageUrl = article.imageUrl,
+            publishedAtMillis = article.publishedAtMillis,
+            savedAtMillis = now()
+        )
+    )
 
     /**
      * Fetches fresh headlines for [category] unless its cache was refreshed within [maxAge];

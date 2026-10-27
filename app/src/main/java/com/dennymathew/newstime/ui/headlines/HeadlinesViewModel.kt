@@ -5,7 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dennymathew.newstime.data.NewsCategory
 import com.dennymathew.newstime.data.NewsRepository
+import com.dennymathew.newstime.data.local.ArticleContent
 import com.dennymathew.newstime.data.local.ArticleEntity
+import com.dennymathew.newstime.data.local.SavedArticleEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -24,10 +26,16 @@ import java.io.IOException
 import javax.inject.Inject
 
 data class HeadlinesUiState(
+    /** The headline feed; kept while [showingSaved] so switching back returns to it. */
     val category: NewsCategory = NewsCategory.Top,
-    /** False until the cached articles for [category] have been read at least once. */
+    /** True when the Saved chip is selected instead of a category. */
+    val showingSaved: Boolean = false,
+    /** False until the list being shown (headlines or saved) has been read at least once. */
     val isLoaded: Boolean = false,
     val articles: List<ArticleEntity> = emptyList(),
+    /** Saved articles, newest saved first. */
+    val savedArticles: List<SavedArticleEntity> = emptyList(),
+    val savedUrls: Set<String> = emptySet(),
     val isRefreshing: Boolean = false,
     val error: HeadlinesError? = null
 )
@@ -46,7 +54,8 @@ class HeadlinesViewModel @Inject constructor(
         HeadlinesUiState(
             category = savedState.get<String>(KEY_CATEGORY)
                 ?.let { name -> NewsCategory.entries.firstOrNull { it.name == name } }
-                ?: NewsCategory.Top
+                ?: NewsCategory.Top,
+            showingSaved = savedState.get<Boolean>(KEY_SHOWING_SAVED) ?: false
         )
     )
     private var refreshJob: Job? = null
@@ -55,14 +64,18 @@ class HeadlinesViewModel @Inject constructor(
         combine(
             status.map { it.category }.distinctUntilChanged()
                 .flatMapLatest { category -> repository.articles(category).map { category to it } },
+            repository.savedArticles(),
+            repository.savedUrls(),
             status
-        ) { (listCategory, articles), status ->
+        ) { (listCategory, articles), saved, savedUrls, status ->
             // During a switch the previous category's list can still arrive; ignore it.
-            if (listCategory == status.category) {
-                status.copy(isLoaded = true, articles = articles)
-            } else {
-                status
-            }
+            val articlesLoaded = listCategory == status.category
+            status.copy(
+                isLoaded = status.showingSaved || articlesLoaded,
+                articles = if (articlesLoaded) articles else status.articles,
+                savedArticles = saved,
+                savedUrls = savedUrls
+            )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), status.value)
 
     init {
@@ -70,11 +83,31 @@ class HeadlinesViewModel @Inject constructor(
     }
 
     fun selectCategory(category: NewsCategory) {
-        if (category == status.value.category) return
+        val current = status.value
+        if (category == current.category) {
+            // Coming back from Saved to the same feed: its list is still loaded.
+            if (current.showingSaved) {
+                savedState[KEY_SHOWING_SAVED] = false
+                status.update { it.copy(showingSaved = false) }
+            }
+            return
+        }
         refreshJob?.cancel()
         savedState[KEY_CATEGORY] = category.name
+        savedState[KEY_SHOWING_SAVED] = false
         status.value = HeadlinesUiState(category = category)
         refresh(force = false)
+    }
+
+    /** Shows saved articles; they come from the database only, so this works offline. */
+    fun selectSaved() {
+        if (status.value.showingSaved) return
+        savedState[KEY_SHOWING_SAVED] = true
+        status.update { it.copy(showingSaved = true) }
+    }
+
+    fun toggleSaved(article: ArticleContent) {
+        viewModelScope.launch { repository.toggleSaved(article) }
     }
 
     fun refresh(force: Boolean = true) {
@@ -100,5 +133,6 @@ class HeadlinesViewModel @Inject constructor(
 
     private companion object {
         const val KEY_CATEGORY = "category"
+        const val KEY_SHOWING_SAVED = "showingSaved"
     }
 }

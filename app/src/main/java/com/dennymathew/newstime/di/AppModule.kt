@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.dennymathew.newstime.BuildConfig
 import com.dennymathew.newstime.data.local.ArticleDao
 import com.dennymathew.newstime.data.local.NewsDatabase
+import com.dennymathew.newstime.data.local.SavedArticleDao
 import com.dennymathew.newstime.data.remote.NewsApi
 import dagger.Module
 import dagger.Provides
@@ -68,10 +69,17 @@ object AppModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): NewsDatabase =
         Room.databaseBuilder(context, NewsDatabase::class.java, NewsDatabase.NAME)
-            // The database is only a cache of headlines, so a schema change can start fresh.
-            .fallbackToDestructiveMigration(dropAllTables = true)
+            // Saved articles are user data: every upgrade needs a real migration.
+            .addMigrations(*NewsDatabase.ALL_MIGRATIONS)
+            // Versions 1 and 2 predate exported schemas and only cached headlines.
+            .fallbackToDestructiveMigrationFrom(true, 1, 2)
+            // Only reachable by installing an older build over a newer one (development).
+            .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
             .build()
 
     @Provides
     fun provideArticleDao(database: NewsDatabase): ArticleDao = database.articleDao()
+
+    @Provides
+    fun provideSavedArticleDao(database: NewsDatabase): SavedArticleDao = database.savedArticleDao()
 }

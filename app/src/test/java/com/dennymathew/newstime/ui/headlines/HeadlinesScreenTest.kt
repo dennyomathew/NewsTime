@@ -1,11 +1,18 @@
 package com.dennymathew.newstime.ui.headlines
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -16,6 +23,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
 import com.dennymathew.newstime.data.NewsCategory
 import com.dennymathew.newstime.data.local.ArticleEntity
+import com.dennymathew.newstime.data.local.SavedArticleEntity
 import com.dennymathew.newstime.ui.theme.NewsTimeTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -34,6 +42,8 @@ class HeadlinesScreenTest {
     private var refreshes = 0
     private var errorsShown = 0
     private val selectedCategories = mutableListOf<NewsCategory>()
+    private var savedSelections = 0
+    private val toggledUrls = mutableListOf<String>()
 
     // Most tests start from a loaded cache; pass loaded = false to test the loading frame.
     private fun setScreen(state: HeadlinesUiState, loaded: Boolean = true) {
@@ -49,6 +59,8 @@ class HeadlinesScreenTest {
                 onRefresh = { refreshes++ },
                 onErrorShown = { errorsShown++ },
                 onCategorySelected = { selectedCategories += it },
+                onSavedSelected = { savedSelections++ },
+                onToggleSaved = { toggledUrls += it.url },
                 onArticleClick = { openedUris += it.url }
             )
         }
@@ -183,12 +195,89 @@ class HeadlinesScreenTest {
         assertTrue(refreshes > 0)
     }
 
+    @Test
+    fun savedChip_isLastAndSelectsSavedView() {
+        setScreen(HeadlinesUiState())
+
+        savedChip().assertIsNotSelected().performClick()
+
+        assertEquals(1, savedSelections)
+    }
+
+    @Test
+    fun savedView_selectsSavedChipOnly() {
+        setScreen(HeadlinesUiState(category = NewsCategory.Business, showingSaved = true))
+
+        composeRule.onNodeWithText("Business").assertIsNotSelected()
+        savedChip().assertIsSelected()
+    }
+
+    @Test
+    fun tappingBookmarkTogglesSave() {
+        setScreen(HeadlinesUiState(articles = listOf(article(1), article(2))))
+
+        composeRule.onAllNodesWithContentDescription("Save article")[1].performClick()
+
+        assertEquals(listOf("https://example.com/2"), toggledUrls)
+        assertTrue(openedUris.isEmpty())
+    }
+
+    @Test
+    fun savedHeadline_showsRemoveBookmark() {
+        setScreen(
+            HeadlinesUiState(
+                articles = listOf(article(1), article(2)),
+                savedUrls = setOf("https://example.com/2")
+            )
+        )
+
+        composeRule.onAllNodesWithContentDescription("Save article").assertCountEquals(1)
+        composeRule.onNodeWithContentDescription("Remove from saved").assertIsOn()
+    }
+
+    @Test
+    fun savedView_withNothingSaved_showsEmptyState() {
+        setScreen(HeadlinesUiState(articles = listOf(article(1)), showingSaved = true))
+
+        composeRule.onNodeWithText(SAVED_EMPTY).assertExists()
+        composeRule.onNodeWithText("Headline 1").assertDoesNotExist()
+    }
+
+    @Test
+    fun savedView_showsSavedArticlesAndOpensThem() {
+        setScreen(
+            HeadlinesUiState(
+                articles = listOf(article(1)),
+                showingSaved = true,
+                savedArticles = listOf(saved(7)),
+                savedUrls = setOf("https://example.com/7")
+            )
+        )
+
+        composeRule.onNodeWithText("Headline 1").assertDoesNotExist()
+        composeRule.onNodeWithText(SAVED_EMPTY).assertDoesNotExist()
+        composeRule.onNodeWithText("Headline 7").performClick()
+
+        assertEquals(listOf("https://example.com/7"), openedUris)
+    }
+
     /** Vertical distance from the [index]-th node with [aboveText] to the node with [belowText]. */
     private fun gapBetween(aboveText: String, belowText: String, index: Int): Float {
         val above = composeRule.onAllNodesWithText(aboveText)[index].getUnclippedBoundsInRoot()
         val below = composeRule.onNodeWithText(belowText).getUnclippedBoundsInRoot()
         return (below.top - above.bottom).value
     }
+
+    private fun saved(id: Int) = SavedArticleEntity(
+        url = "https://example.com/$id",
+        title = "Headline $id",
+        description = "Summary $id",
+        author = null,
+        sourceName = "Associated Press",
+        imageUrl = null,
+        publishedAtMillis = null,
+        savedAtMillis = 0
+    )
 
     private fun article(id: Int, publishedAtMillis: Long? = null) = ArticleEntity(
         category = NewsCategory.Top.name,
@@ -201,4 +290,14 @@ class HeadlinesScreenTest {
         publishedAtMillis = publishedAtMillis,
         position = id
     )
+
+    /** The Saved chip is last in the row, so it may first need scrolling into view. */
+    private fun savedChip(): SemanticsNodeInteraction {
+        composeRule.onNodeWithTag(CATEGORY_CHIPS_TAG).performScrollToNode(hasText("Saved"))
+        return composeRule.onNodeWithText("Saved")
+    }
+
+    private companion object {
+        const val SAVED_EMPTY = "No saved articles yet. Tap the bookmark on a headline to save it."
+    }
 }

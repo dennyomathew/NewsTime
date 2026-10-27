@@ -6,13 +6,13 @@ import androidx.room.Entity
 @Entity(tableName = "articles", primaryKeys = ["category", "url"])
 data class ArticleEntity(
     val category: String,
-    val url: String,
-    val title: String,
-    val description: String?,
-    val author: String?,
-    val sourceName: String?,
-    val imageUrl: String?,
-    val publishedAtMillis: Long?,
+    override val url: String,
+    override val title: String,
+    override val description: String?,
+    override val author: String?,
+    override val sourceName: String?,
+    override val imageUrl: String?,
+    override val publishedAtMillis: Long?,
     // Preserves the API's ordering (newest first) across refreshes.
     val position: Int
-)
+) : ArticleContent
