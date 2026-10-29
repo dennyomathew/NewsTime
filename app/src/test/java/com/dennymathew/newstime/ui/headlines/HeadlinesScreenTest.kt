@@ -44,6 +44,7 @@ class HeadlinesScreenTest {
     private val selectedCategories = mutableListOf<NewsCategory>()
     private var savedSelections = 0
     private val toggledUrls = mutableListOf<String>()
+    private val sharedUrls = mutableListOf<String>()
 
     // Most tests start from a loaded cache; pass loaded = false to test the loading frame.
     private fun setScreen(state: HeadlinesUiState, loaded: Boolean = true) {
@@ -61,7 +62,8 @@ class HeadlinesScreenTest {
                 onCategorySelected = { selectedCategories += it },
                 onSavedSelected = { savedSelections++ },
                 onToggleSaved = { toggledUrls += it.url },
-                onArticleClick = { openedUris += it.url }
+                onArticleClick = { openedUris += it.url },
+                onShareArticle = { sharedUrls += it.url }
             )
         }
     }
@@ -220,6 +222,34 @@ class HeadlinesScreenTest {
 
         assertEquals(listOf("https://example.com/2"), toggledUrls)
         assertTrue(openedUris.isEmpty())
+    }
+
+    @Test
+    fun tappingShare_sharesThatArticleOnly() {
+        setScreen(HeadlinesUiState(articles = listOf(article(1), article(2))))
+
+        composeRule.onAllNodesWithContentDescription("Share article")[1].performClick()
+
+        assertEquals(listOf("https://example.com/2"), sharedUrls)
+        assertTrue(openedUris.isEmpty())
+        assertTrue(toggledUrls.isEmpty())
+    }
+
+    @Test
+    fun savedView_tappingShare_sharesSavedArticle() {
+        setScreen(
+            HeadlinesUiState(
+                showingSaved = true,
+                savedArticles = listOf(saved(7), saved(8)),
+                savedUrls = setOf("https://example.com/7", "https://example.com/8")
+            )
+        )
+
+        composeRule.onAllNodesWithContentDescription("Share article")[0].performClick()
+
+        assertEquals(listOf("https://example.com/7"), sharedUrls)
+        assertTrue(openedUris.isEmpty())
+        assertTrue(toggledUrls.isEmpty())
     }
 
     @Test

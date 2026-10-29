@@ -68,7 +68,8 @@ class SavedArticlesFlowTest {
                     onCategorySelected = viewModel::selectCategory,
                     onSavedSelected = viewModel::selectSaved,
                     onToggleSaved = viewModel::toggleSaved,
-                    onArticleClick = {}
+                    onArticleClick = {},
+                    onShareArticle = {}
                 )
             }
         }

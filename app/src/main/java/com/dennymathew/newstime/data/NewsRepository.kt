@@ -100,9 +100,6 @@ class NewsRepository(
         )
     }
 
-    private fun isWebUrl(url: String): Boolean =
-        url.startsWith("https://", ignoreCase = true) || url.startsWith("http://", ignoreCase = true)
-
     /**
      * News API image links sometimes lack a scheme (`//host/...`) or use `http://`, which
      * Android blocks by default; both become `https://`. Anything else unusable is dropped.

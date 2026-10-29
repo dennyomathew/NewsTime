@@ -11,6 +11,7 @@
     <string name="category_saved">Saved</string>
     <string name="save_article">Save article</string>
     <string name="remove_saved_article">Remove from saved</string>
+    <string name="share_article">Share article</string>
     <string name="saved_empty">No saved articles yet. Tap the bookmark on a headline to save it.</string>
     <string name="headlines_empty">No headlines yet. Pull down to refresh.</string>
     <string name="error_network">Can\'t reach the news service. Showing saved headlines.</string>

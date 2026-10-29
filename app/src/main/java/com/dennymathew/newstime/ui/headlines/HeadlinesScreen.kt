@@ -32,6 +32,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -83,8 +84,19 @@ fun HeadlinesRoute(viewModel: HeadlinesViewModel = hiltViewModel()) {
         onCategorySelected = viewModel::selectCategory,
         onSavedSelected = viewModel::selectSaved,
         onToggleSaved = viewModel::toggleSaved,
-        onArticleClick = { article -> context.openInCustomTab(article.url, toolbarColor) }
+        onArticleClick = { article -> context.openInCustomTab(article.url, toolbarColor) },
+        onShareArticle = { article -> context.shareArticle(article) }
     )
+}
+
+/** Opens the system share sheet for [article]; the user picks the app. */
+private fun Context.shareArticle(article: ArticleContent) {
+    val send = shareArticleIntent(article) ?: return
+    try {
+        startActivity(Intent.createChooser(send, null))
+    } catch (e: ActivityNotFoundException) {
+        // No share sheet available; nothing to do.
+    }
 }
 
 /** Opens [url] in a Chrome Custom Tab, falling back to any app that can view it. */
@@ -120,6 +132,7 @@ fun HeadlinesScreen(
     onSavedSelected: () -> Unit,
     onToggleSaved: (ArticleContent) -> Unit,
     onArticleClick: (ArticleContent) -> Unit,
+    onShareArticle: (ArticleContent) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -176,7 +189,8 @@ fun HeadlinesScreen(
                             listState = rememberLazyListState(),
                             contentPadding = listPadding,
                             onArticleClick = onArticleClick,
-                            onToggleSaved = onToggleSaved
+                            onToggleSaved = onToggleSaved,
+                            onShareArticle = onShareArticle
                         )
                     }
                 }
@@ -199,7 +213,8 @@ fun HeadlinesScreen(
                             listState = rememberLazyListState(),
                             contentPadding = listPadding,
                             onArticleClick = onArticleClick,
-                            onToggleSaved = onToggleSaved
+                            onToggleSaved = onToggleSaved,
+                            onShareArticle = onShareArticle
                         )
                     }
                 }
@@ -245,7 +260,8 @@ private fun ArticleList(
     listState: LazyListState,
     contentPadding: PaddingValues,
     onArticleClick: (ArticleContent) -> Unit,
-    onToggleSaved: (ArticleContent) -> Unit
+    onToggleSaved: (ArticleContent) -> Unit,
+    onShareArticle: (ArticleContent) -> Unit
 ) {
     LazyColumn(
         state = listState,
@@ -260,7 +276,8 @@ private fun ArticleList(
                 article = article,
                 isSaved = article.url in savedUrls,
                 onClick = { onArticleClick(article) },
-                onToggleSaved = { onToggleSaved(article) }
+                onToggleSaved = { onToggleSaved(article) },
+                onShare = { onShareArticle(article) }
             )
         }
     }
@@ -271,7 +288,8 @@ private fun ArticleCard(
     article: ArticleContent,
     isSaved: Boolean,
     onClick: () -> Unit,
-    onToggleSaved: () -> Unit
+    onToggleSaved: () -> Unit,
+    onShare: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -287,7 +305,7 @@ private fun ArticleCard(
                     color = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.weight(1f)
                 )
-                SaveToggle(isSaved = isSaved, onToggle = onToggleSaved)
+                CardActions(isSaved = isSaved, onToggleSaved = onToggleSaved, onShare = onShare)
             }
             articleMeta(article)?.let {
                 Text(
@@ -313,13 +331,29 @@ private fun ArticleCard(
     }
 }
 
-/** Bookmark toggle; offset so the glyph lines up with the card padding (the 48dp touch target stays). */
+/**
+ * Share and bookmark, side by side beside the title so the card doesn't grow taller. Offset so
+ * the glyphs line up with the card padding (the 48dp touch targets stay).
+ */
+@Composable
+private fun CardActions(isSaved: Boolean, onToggleSaved: () -> Unit, onShare: () -> Unit) {
+    Row(Modifier.offset(x = 12.dp, y = (-12).dp)) {
+        IconButton(onClick = onShare) {
+            Icon(
+                painter = painterResource(R.drawable.ic_share),
+                contentDescription = stringResource(R.string.share_article),
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
+        SaveToggle(isSaved = isSaved, onToggle = onToggleSaved)
+    }
+}
+
 @Composable
 private fun SaveToggle(isSaved: Boolean, onToggle: () -> Unit) {
     IconToggleButton(
         checked = isSaved,
-        onCheckedChange = { onToggle() },
-        modifier = Modifier.offset(x = 12.dp, y = (-12).dp)
+        onCheckedChange = { onToggle() }
     ) {
         Icon(
             painter = painterResource(
@@ -416,7 +450,8 @@ private fun HeadlinesScreenPreview() {
             onCategorySelected = {},
             onSavedSelected = {},
             onToggleSaved = {},
-            onArticleClick = {}
+            onArticleClick = {},
+            onShareArticle = {}
         )
     }
 }
