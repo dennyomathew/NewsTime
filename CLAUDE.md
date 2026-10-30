@@ -32,8 +32,10 @@ CI (`.github/workflows/android.yml`) runs all three on pushes to `main` and on p
   data and keeps its own copy of each saved headline; both implement `ArticleContent`, which the
   cards render.
 - `ui/headlines`: `HeadlinesViewModel` exposes `HeadlinesUiState`; `HeadlinesScreen` is
-  stateless (the route wires the ViewModel and opens articles in Custom Tabs). Saved articles
-  are the last chip in the category row (`showingSaved`); that view reads only the database.
+  stateless (the route wires the ViewModel, opens articles in Custom Tabs and shares them via
+  `shareArticleIntent`, a chooser-wrapped `ACTION_SEND` for http(s) links only). Each card has
+  Share and bookmark actions. Saved articles are the last chip in the category row
+  (`showingSaved`); that view reads only the database.
 
 ## Database
 
